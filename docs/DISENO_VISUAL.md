@@ -8,7 +8,7 @@ Estado: **dirección visual aprobada por el usuario** a partir del mockup de sei
 - Fondos: blanco y gris muy claro; mensajes de usuario con tinte teal suave, interlocutor en gris claro.
 - Texto principal: azul marino muy oscuro; secundarios en gris suficientemente contrastado.
 - Tarjetas y botones: esquinas redondeadas; sin sombras pesadas ni decoración excesiva.
-- Tipografía: sistema de iOS/Android, tamaño escalable. Priorizar legibilidad sobre reproducir píxel por píxel.
+- Tipografía: **Figtree Variable** como fuente principal, con fallback del sistema; tamaño escalable. Ver `docs/TIPOGRAFIA.md`.
 - Iconos: trazos sencillos con etiquetas de texto, no depender solo del icono.
 - Componentes: encabezados compactos, CTA teal dominante, filas de acciones, campos grandes, avisos discretos y confirmaciones claras.
 - Respetar modo oscuro, ajustes de fuente, áreas seguras, teclado y tamaños pequeños.
@@ -80,3 +80,6 @@ Inicio → Preferencias. «Presentarme» abre Mostrar mensaje con frase editable
 - Soportar escalado de texto sin truncar botones críticos.
 - Comprobar en pantallas iPhone y Android reales; el mockup no es especificación exacta de dimensiones.
 - Mantener consistencia de componentes y estados vacíos, carga y error.
+
+## Tipografía aprobada
+Usar **Figtree Variable** como fuente principal en todas las pantallas. Consultar escala, pesos, line-height y reglas de accesibilidad en [`TIPOGRAFIA.md`](TIPOGRAFIA.md). La indicación anterior de tipografía del sistema queda reemplazada por Figtree como primera opción, con fallback del sistema.
