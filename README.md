@@ -27,3 +27,7 @@ Puente es una aplicación móvil de accesibilidad, prevista para iOS y Android c
 
 ## Desarrollo
 Antes de escribir código, leer `AGENTS.md` y los documentos relevantes. No iniciar implementación ni elegir servicios definitivos sin acordar el alcance.
+
+## Diseño de las seis pantallas
+- [Diseño visual aprobado](docs/DISENO_VISUAL.md)
+- [Plan de implementación de UI](docs/PLAN_IMPLEMENTACION_UI.md)
