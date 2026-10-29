@@ -31,3 +31,6 @@ Antes de escribir código, leer `AGENTS.md` y los documentos relevantes. No inic
 ## Diseño de las seis pantallas
 - [Diseño visual aprobado](docs/DISENO_VISUAL.md)
 - [Plan de implementación de UI](docs/PLAN_IMPLEMENTACION_UI.md)
+
+## Onboarding
+El flujo de bienvenida de tres pantallas está especificado en [ONBOARDING.md](docs/ONBOARDING.md). Sus imágenes individuales están pendientes de subir al repositorio.
