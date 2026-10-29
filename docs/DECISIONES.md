@@ -37,3 +37,6 @@ Tres pantallas: «Comunicarnos nos acerca», «Escribí, hablá o mostrá», «E
 
 ## Implementación del Onboarding — 29/10/2026
 A partir del diseño aprobado por el usuario, se incorporaron físicamente los recursos gráficos a `assets/images/onboarding/` y se implementó `OnboardingScreen` con las tres pantallas interactivas, navegación (Omitir, Siguiente, Volver, Empezar), etiquetas semánticas y adaptabilidad para texto escalable.
+
+## Implementación de la pantalla de Inicio — 29/10/2026
+A partir del diseño visual aprobado por el usuario en el mockup individual, se actualizó `HomeScreen` (`lib/features/home/home_screen.dart`): titular «Comunicarnos hace todo más fácil», botón destacado «Iniciar conversación» (gradiente teal y badge circular), tres tarjetas secundarias verticales («Frases rápidas», «Expresar», «Comprar») y banner de presentación personal con ilustración e interacción «Ver ejemplo». Componente reutilizable `PuenteBrandLogo` compartido con el onboarding.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/puente_brand_logo.dart';
 import '../conversation/conversation_screen.dart';
 import '../expression/expression_screen.dart';
 import '../quick_phrases/quick_phrases_sheet.dart';
@@ -16,170 +17,222 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? AppColors.backgroundDark : Colors.white;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primaryTeal,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.hearing_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text('Puente', style: AppTypography.screenTitle(textPrimary)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Preferencias',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Bienvenida y propósito
-              Text(
-                'Tu independencia,\ntu manera de comunicarte.',
-                style: AppTypography.display(textPrimary),
+              // Barra superior: Logo Puente a la izquierda + Botón de Preferencias circular
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    PuenteBrandLogo(
+                      fontSize: 24,
+                      iconSize: 34,
+                      isDark: isDark,
+                    ),
+                    Semantics(
+                      button: true,
+                      label: 'Abrir Preferencias y Ajustes',
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceMutedDark : const Color(0xFFF1F4F6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: isDark ? AppColors.textPrimaryDark : const Color(0xFF2C3E50),
+                            size: 22,
+                          ),
+                          tooltip: 'Preferencias',
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (context) => const SettingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
+
+              // Titular principal y descripción
               Text(
-                'Iniciá una interacción cara a cara o escribí lo que necesitás decir.',
-                style: AppTypography.body(textSecondary),
+                'Comunicarnos\nhace todo más fácil.',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontFamilyFallback: AppTypography.fontFallback,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Escribí, hablá o usá frases rápidas\npara comunicarte en tu vida cotidiana.',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontFamilyFallback: AppTypography.fontFallback,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  height: 1.4,
+                  color: textSecondary,
+                ),
               ),
               const SizedBox(height: 24),
 
-              // CTA Principal: Iniciar conversación
+              // Tarjeta destacada principal: Iniciar conversación
               Semantics(
                 button: true,
-                label: 'Iniciar conversación interactiva',
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => const ConversationScreen(),
+                label: 'Iniciar conversación cara a cara',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) => const ConversationScreen(),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(24),
+                    child: Ink(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF0D7E88),
+                            Color(0xFF096870),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0D7E88).withValues(alpha: 0.25),
+                            offset: const Offset(0, 8),
+                            blurRadius: 18,
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryTeal,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.chat_bubble_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.forum_rounded,
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Iniciar\nconversación',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontFamilyFallback: AppTypography.fontFallback,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Escribí, hablá y escuchá',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontFamilyFallback: AppTypography.fontFallback,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
                             color: Colors.white,
-                            size: 28,
+                            size: 20,
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Iniciar conversación',
-                                style: AppTypography.sectionTitle(Colors.white),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Hablamos o escribimos de forma accesible',
-                                style: AppTypography.secondary(Colors.white.withValues(alpha: 0.9)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Accesos directos secundarios (Fila)
-              Row(
-                children: [
-                  Expanded(
-                    child: _SecondaryActionCard(
-                      icon: Icons.flash_on_rounded,
-                      title: 'Frases rápidas',
-                      subtitle: 'Respuestas frecuentes',
-                      onTap: () {
-                        QuickPhrasesSheet.show(
-                          context,
-                          onPhraseSelected: (phrase) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (context) => ShowMessageScreen(
-                                  initialText: phrase,
-                                  isPresentation: false,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SecondaryActionCard(
-                      icon: Icons.edit_note_rounded,
-                      title: 'Expresar',
-                      subtitle: 'Borrador y claridad',
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const ExpressionScreen(),
+              // Lista vertical de accesos directos secundarios (Full width)
+              _SecondaryActionTile(
+                icon: Icons.chat_bubble_outline_rounded,
+                title: 'Frases rápidas',
+                subtitle: 'Mensajes útiles para el día a día',
+                onTap: () {
+                  QuickPhrasesSheet.show(
+                    context,
+                    onPhraseSelected: (phrase) {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) => ShowMessageScreen(
+                            initialText: phrase,
+                            isPresentation: false,
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
               const SizedBox(height: 12),
 
-              // Atajo para compras (abre conversación con contexto de precio)
-              _SecondaryActionCard(
-                icon: Icons.shopping_bag_outlined,
-                title: 'Comprar o consultar precios',
-                subtitle: 'Acceso directo con verificación de importes',
+              _SecondaryActionTile(
+                icon: Icons.edit_outlined,
+                title: 'Expresar',
+                subtitle: 'Te ayudamos a redactar tu mensaje',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const ExpressionScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+
+              _SecondaryActionTile(
+                icon: Icons.shopping_cart_outlined,
+                title: 'Comprar',
+                subtitle: 'Precios y confirmaciones',
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -190,53 +243,119 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Bloque inferior de presentación personal accesible en 1 toque
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.contact_mail_outlined,
-                            color: AppColors.primaryTeal,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Presentación personal',
-                            style: AppTypography.sectionTitle(textPrimary),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Mostrá rápidamente quién sos y cómo preferís comunicarte sin depender de explicaciones largas.',
-                        style: AppTypography.secondary(textSecondary),
-                      ),
-                      const SizedBox(height: 14),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.fullscreen_rounded),
-                        label: const Text('Presentarme con un toque'),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) => const ShowMessageScreen(
-                                initialText: defaultPresentation,
-                                isPresentation: true,
-                              ),
+              // Banner inferior: Presentación personal con ilustración
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF132D33) : const Color(0xFFE5F4F5),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 14, 18, 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Ilustración recortada de la persona con teléfono
+                    SizedBox(
+                      width: 105,
+                      height: 110,
+                      child: Image.asset(
+                        'assets/images/home_presentation_banner.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              Icons.person_pin_rounded,
+                              size: 54,
+                              color: AppColors.primaryTeal.withValues(alpha: 0.8),
                             ),
                           );
                         },
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Textos y botón de ver ejemplo
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Podés mostrar un mensaje de presentación',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontFamilyFallback: AppTypography.fontFallback,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              height: 1.25,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'en cualquier momento durante la conversación.',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontFamilyFallback: AppTypography.fontFallback,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              height: 1.35,
+                              color: isDark ? AppColors.textSecondaryDark : const Color(0xFF5A6F7B),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Botón píldora "Ver ejemplo"
+                          Semantics(
+                            button: true,
+                            label: 'Ver ejemplo de mensaje de presentación',
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (context) => const ShowMessageScreen(
+                                      initialText: defaultPresentation,
+                                      isPresentation: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E444B) : const Color(0xFFCEECEE),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 16,
+                                      color: AppColors.primaryTeal,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Ver ejemplo',
+                                      style: TextStyle(
+                                        fontFamily: AppTypography.fontFamily,
+                                        fontFamilyFallback: AppTypography.fontFallback,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primaryTeal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -245,8 +364,8 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _SecondaryActionCard extends StatelessWidget {
-  const _SecondaryActionCard({
+class _SecondaryActionTile extends StatelessWidget {
+  const _SecondaryActionTile({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -262,29 +381,69 @@ class _SecondaryActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : const Color(0xFF70818B);
 
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: AppColors.primaryTeal, size: 24),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: AppTypography.sectionTitle(textPrimary),
+    return Semantics(
+      button: true,
+      label: '$title: $subtitle',
+      child: Material(
+        color: isDark ? AppColors.surfaceDark : const Color(0xFFF9FBFC),
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : const Color(0xFFE8EEF1),
+                width: 1,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: AppTypography.metadata(textSecondary),
-              ),
-            ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  color: AppColors.primaryTeal,
+                  size: 28,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontFamilyFallback: AppTypography.fontFallback,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontFamilyFallback: AppTypography.fontFallback,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: isDark ? AppColors.textMutedDark : const Color(0xFFA0AFB7),
+                  size: 16,
+                ),
+              ],
+            ),
           ),
         ),
       ),

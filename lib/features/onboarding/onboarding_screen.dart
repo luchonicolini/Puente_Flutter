@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/puente_brand_logo.dart';
 import '../home/home_screen.dart';
 
 class OnboardingStep {
@@ -111,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _PuenteBrandLogo(isDark: isDark),
+                  PuenteBrandLogo(isDark: isDark),
                   Semantics(
                     button: true,
                     label: 'Omitir introducción',
@@ -379,52 +380,3 @@ class _DotsIndicator extends StatelessWidget {
   }
 }
 
-class _PuenteBrandLogo extends StatelessWidget {
-  const _PuenteBrandLogo({required this.isDark});
-
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Ícono característico de Puente: globo de conversación con corte circular
-        Container(
-          width: 30,
-          height: 30,
-          decoration: const BoxDecoration(
-            color: AppColors.primaryTeal,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(15),
-              topRight: Radius.circular(15),
-              bottomRight: Radius.circular(15),
-              bottomLeft: Radius.circular(4),
-            ),
-          ),
-          child: Center(
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.backgroundDark : Colors.white,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Puente',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontFamilyFallback: AppTypography.fontFallback,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: AppColors.primaryTeal,
-          ),
-        ),
-      ],
-    );
-  }
-}
