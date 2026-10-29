@@ -36,3 +36,6 @@ Flutter/Dart, Riverpod y módulos por funcionalidad. Reconocimiento de voz, sín
 
 ## Documentos
 Consultar `docs/PRODUCTO.md`, `docs/FUNCIONALIDADES.md`, `docs/FLUJOS_USUARIO.md`, `docs/ACCESIBILIDAD.md`, `docs/ARQUITECTURA.md` y `docs/DECISIONES.md`.
+
+## Diseño aprobado
+Consultar obligatoriamente `docs/DISENO_VISUAL.md` y `docs/PLAN_IMPLEMENTACION_UI.md` para tareas de interfaz. Las seis pantallas y su dirección visual están aprobadas; todavía no hay autorización para escribir código.
