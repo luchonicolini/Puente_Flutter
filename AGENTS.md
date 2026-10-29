@@ -39,3 +39,6 @@ Consultar `docs/PRODUCTO.md`, `docs/FUNCIONALIDADES.md`, `docs/FLUJOS_USUARIO.md
 
 ## Diseño aprobado
 Consultar obligatoriamente `docs/DISENO_VISUAL.md` y `docs/PLAN_IMPLEMENTACION_UI.md` para tareas de interfaz. Las seis pantallas y su dirección visual están aprobadas; todavía no hay autorización para escribir código.
+
+## Tipografía obligatoria
+La familia visual aprobada es **Figtree Variable**. Antes de implementar UI, consultar `docs/TIPOGRAFIA.md`. No sustituirla por SF Pro o Roboto como fuente principal sin aprobación; mantener fallback del sistema. El archivo TTF aún debe incorporarse legalmente al proyecto.
