@@ -45,3 +45,12 @@ La familia visual aprobada es **Figtree Variable**. Antes de implementar UI, con
 
 ## Onboarding aprobado
 Consultar `docs/ONBOARDING.md`: tres pasos solo en primera apertura, omitibles, sin registro ni permisos. Las ilustraciones PNG todavía están pendientes de incorporar físicamente; no asumir que existen assets.
+
+## Skills del proyecto (Codex)
+Las skills locales están en `.agents/skills/`. Antes de cada tarea, identificar si una o varias aplican; leer solo sus `SKILL.md` relevantes, además de los documentos requeridos. No cargar todas indiscriminadamente.
+- `puente-flutter-ui`: UI, navegación, onboarding, componentes, estilos.
+- `puente-accessibility`: accesibilidad y revisión inclusiva.
+- `puente-conversation`: conversación híbrida, STT/TTS, presentación y «No entendí».
+- `puente-ai-safety`: Expresar, IA, ambigüedad, privacidad y confirmaciones.
+- `puente-testing`: pruebas, regresión y verificación.
+Si hay conflicto entre una skill y las decisiones aprobadas, no resolverlo silenciosamente: consultar. Las skills son procedimientos, no autorización para programar. Mantenerlas actualizadas cuando cambien los requisitos.
