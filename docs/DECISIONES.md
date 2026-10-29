@@ -28,3 +28,6 @@ No cambiar decisiones acordadas sin consultarlo. Cuando el usuario apruebe una m
 
 ## Aprobación de diseño — 29/10/2026
 El usuario aprobó la dirección visual del mockup de seis pantallas: Inicio, Conversación, Mostrar mensaje, Expresar, Confirmar información y Preferencias. Especificación detallada en `docs/DISENO_VISUAL.md`; plan de UI en `docs/PLAN_IMPLEMENTACION_UI.md`. Esta aprobación no implica comenzar programación ni aprobar proveedores técnicos.
+
+## Decisión tipográfica — 29/10/2026
+El usuario eligió **Figtree Variable** (`Figtree-Variable.ttf`) como tipografía principal de Puente para iOS y Android. Escala y reglas en `docs/TIPOGRAFIA.md`. El archivo de fuente y su licencia todavía deben incorporarse; no hay implementación Flutter iniciada.
