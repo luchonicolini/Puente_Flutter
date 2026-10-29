@@ -34,3 +34,6 @@ Antes de escribir código, leer `AGENTS.md` y los documentos relevantes. No inic
 
 ## Onboarding
 El flujo de bienvenida de tres pantallas está especificado en [ONBOARDING.md](docs/ONBOARDING.md). Sus imágenes individuales están pendientes de subir al repositorio.
+
+## Skills para agentes
+Cinco procedimientos especializados están versionados en [`.agents/skills/`](.agents/skills/). Ver `AGENTS.md` para seleccionar la skill adecuada antes de cada tarea.
