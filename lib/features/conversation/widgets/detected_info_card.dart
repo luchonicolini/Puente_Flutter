@@ -1,84 +1,159 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
+import '../models/chat_message.dart';
 
 class DetectedInfoCard extends StatelessWidget {
   const DetectedInfoCard({
     super.key,
-    required this.detectedValue,
-    required this.isConfirmed,
-    required this.onConfirmTap,
+    required this.detectedInfo,
+    required this.onTap,
   });
 
-  final String detectedValue;
-  final bool isConfirmed;
-  final VoidCallback onConfirmTap;
+  final DetectedInfo detectedInfo;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textSecondary = isDark ? AppColors.textSecondaryDark : const Color(0xFF6B7D88);
+    final isConfirmed = detectedInfo.isConfirmed;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 8, bottom: 4),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isConfirmed
-            ? (isDark ? AppColors.success.withValues(alpha: 0.15) : AppColors.successLight)
-            : (isDark ? AppColors.warning.withValues(alpha: 0.15) : AppColors.warningLight),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isConfirmed ? AppColors.success : AppColors.warning,
-          width: 1.2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isConfirmed ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                size: 18,
-                color: isConfirmed ? AppColors.success : AppColors.warning,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                isConfirmed ? 'Información confirmada' : 'Información detectada (Sin confirmar)',
-                style: AppTypography.metadata(
-                  isConfirmed ? AppColors.success : AppColors.warning,
-                ).copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
+    return Semantics(
+      button: true,
+      label: 'Información detectada: tocar para confirmar por escrito',
+      child: Container(
+        margin: const EdgeInsets.only(top: 8, bottom: 4),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceMutedDark : const Color(0xFFF9FBFB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isConfirmed
+                ? AppColors.success
+                : (isDark ? AppColors.borderDark : const Color(0xFFE2ECEE)),
+            width: isConfirmed ? 1.5 : 1,
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Dato detectado: "$detectedValue"',
-            style: AppTypography.sectionTitle(textPrimary).copyWith(fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Una transcripción no garantiza verdad. Verificalo por escrito.',
-            style: AppTypography.metadata(textSecondary),
-          ),
-          if (!isConfirmed) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(120, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  backgroundColor: AppColors.primaryTeal,
-                ),
-                icon: const Icon(Icons.verified_outlined, size: 16),
-                label: const Text('Confirmar dato'),
-                onPressed: onConfirmTap,
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
             ),
           ],
-        ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Cabecera: Ícono $ + "Información detectada" + flecha >
+                  Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isConfirmed ? AppColors.success : AppColors.primaryTeal,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Icon(
+                            isConfirmed ? Icons.check_rounded : Icons.attach_money_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          isConfirmed ? 'Información confirmada' : detectedInfo.title,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontFamilyFallback: AppTypography.fontFallback,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: isConfirmed ? AppColors.success : textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (!isConfirmed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Sin confirmar',
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontFamilyFallback: AppTypography.fontFallback,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: isConfirmed ? AppColors.success : AppColors.primaryTeal,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+
+                  // Lista de pares clave-valor
+                  ...detectedInfo.items.entries.map((entry) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              entry.key,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontFamilyFallback: AppTypography.fontFallback,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            entry.value,
+                            style: TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontFamilyFallback: AppTypography.fontFallback,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

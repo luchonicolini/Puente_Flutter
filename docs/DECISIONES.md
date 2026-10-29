@@ -40,3 +40,6 @@ A partir del diseño aprobado por el usuario, se incorporaron físicamente los r
 
 ## Implementación de la pantalla de Inicio — 29/10/2026
 A partir del diseño visual aprobado por el usuario en el mockup individual, se actualizó `HomeScreen` (`lib/features/home/home_screen.dart`): titular «Comunicarnos hace todo más fácil», botón destacado «Iniciar conversación» (gradiente teal y badge circular), tres tarjetas secundarias verticales («Frases rápidas», «Expresar», «Comprar») y banner de presentación personal con ilustración e interacción «Ver ejemplo». Componente reutilizable `PuenteBrandLogo` compartido con el onboarding.
+
+## Implementación de la pantalla de Conversación — 29/10/2026
+A partir del mockup general aprobado de las 6 pantallas (`02. Conversación`), se implementó `ConversationScreen` (`lib/features/conversation/conversation_screen.dart`): burbujas diferenciadas con timestamp, tarjeta contextual «Información detectada» con desglose estructurado de datos (Inscripción / Cuota mensual), fila de 3 botones circulares superiores («Presentarme», «No entendí», «Confirmar»), compositor de texto con botón enviar, y fila inferior con control explícito de micrófono («Tocá para hablar»), silenciador y reproducción TTS en voz alta.
