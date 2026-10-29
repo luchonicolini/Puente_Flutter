@@ -1,7 +1,7 @@
 # Onboarding de Puente — diseño aprobado
 
 ## Estado
-Flujo visual de tres pantallas aprobado por el usuario. **No implementado en Flutter**. Se generaron tres ilustraciones individuales en la conversación, pero los PNG aún deben incorporarse físicamente al repositorio.
+Flujo visual de tres pantallas aprobado por el usuario e **implementado en Flutter** (`lib/features/onboarding/onboarding_screen.dart`). Los 3 recursos gráficos (`onboarding_welcome.png`, `onboarding_communication.png`, `onboarding_independence.png`) fueron incorporados en `assets/images/onboarding/` y registrados en `pubspec.yaml`.
 
 ## Comportamiento
 - Mostrar únicamente en el primer inicio de la instalación.
@@ -45,8 +45,8 @@ Flujo visual de tres pantallas aprobado por el usuario. **No implementado en Flu
 - Imágenes sin textos integrados: títulos, botones e indicadores deben ser widgets Flutter, no partes del PNG.
 - Alt text descriptivo o marcar ilustración decorativa según contexto; no duplicar el contenido textual.
 
-## Recursos gráficos pendientes
-Los tres PNG generados en la conversación deben exportarse, revisarse para comprobar transparencia real (no patrón de cuadros incrustado) y agregarse a las rutas indicadas. **No afirmar que están subidos hasta verificarlo.**
+## Recursos gráficos incorporados
+Los tres PNG fueron extraídos del mockup aprobado y agregados a `assets/images/onboarding/`. Los títulos, botones, indicadores e íconos de la marca se renderizan como widgets nativos de Flutter.
 
 ## Criterios de aceptación
 - Onboarding solo en primera apertura; reapertura voluntaria desde ajustes.

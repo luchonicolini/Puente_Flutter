@@ -34,3 +34,6 @@ El usuario eligió **Figtree Variable** (`Figtree-Variable.ttf`) como tipografí
 
 ## Onboarding aprobado
 Tres pantallas: «Comunicarnos nos acerca», «Escribí, hablá o mostrá», «Entendé y decidí con confianza». Solo en primera apertura, se puede omitir, sin permisos ni registro, y se puede reabrir desde Preferencias. Ver `docs/ONBOARDING.md`. Las ilustraciones generadas aún no están en GitHub.
+
+## Implementación del Onboarding — 29/10/2026
+A partir del diseño aprobado por el usuario, se incorporaron físicamente los recursos gráficos a `assets/images/onboarding/` y se implementó `OnboardingScreen` con las tres pantallas interactivas, navegación (Omitir, Siguiente, Volver, Empezar), etiquetas semánticas y adaptabilidad para texto escalable.
