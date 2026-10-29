@@ -42,3 +42,6 @@ Consultar obligatoriamente `docs/DISENO_VISUAL.md` y `docs/PLAN_IMPLEMENTACION_U
 
 ## Tipografía obligatoria
 La familia visual aprobada es **Figtree Variable**. Antes de implementar UI, consultar `docs/TIPOGRAFIA.md`. No sustituirla por SF Pro o Roboto como fuente principal sin aprobación; mantener fallback del sistema. El archivo TTF aún debe incorporarse legalmente al proyecto.
+
+## Onboarding aprobado
+Consultar `docs/ONBOARDING.md`: tres pasos solo en primera apertura, omitibles, sin registro ni permisos. Las ilustraciones PNG todavía están pendientes de incorporar físicamente; no asumir que existen assets.
