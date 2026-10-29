@@ -31,3 +31,6 @@ El usuario aprobó la dirección visual del mockup de seis pantallas: Inicio, Co
 
 ## Decisión tipográfica — 29/10/2026
 El usuario eligió **Figtree Variable** (`Figtree-Variable.ttf`) como tipografía principal de Puente para iOS y Android. Escala y reglas en `docs/TIPOGRAFIA.md`. El archivo de fuente y su licencia todavía deben incorporarse; no hay implementación Flutter iniciada.
+
+## Onboarding aprobado
+Tres pantallas: «Comunicarnos nos acerca», «Escribí, hablá o mostrá», «Entendé y decidí con confianza». Solo en primera apertura, se puede omitir, sin permisos ni registro, y se puede reabrir desde Preferencias. Ver `docs/ONBOARDING.md`. Las ilustraciones generadas aún no están en GitHub.
