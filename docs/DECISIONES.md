@@ -25,3 +25,6 @@
 
 ## Regla para agentes
 No cambiar decisiones acordadas sin consultarlo. Cuando el usuario apruebe una modificación, registrar fecha, motivo y consecuencia aquí.
+
+## Aprobación de diseño — 29/10/2026
+El usuario aprobó la dirección visual del mockup de seis pantallas: Inicio, Conversación, Mostrar mensaje, Expresar, Confirmar información y Preferencias. Especificación detallada en `docs/DISENO_VISUAL.md`; plan de UI en `docs/PLAN_IMPLEMENTACION_UI.md`. Esta aprobación no implica comenzar programación ni aprobar proveedores técnicos.
