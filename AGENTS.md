@@ -40,6 +40,19 @@ Consultar `docs/PRODUCTO.md`, `docs/FUNCIONALIDADES.md`, `docs/FLUJOS_USUARIO.md
 ## Diseño aprobado
 Consultar obligatoriamente `docs/DISENO_VISUAL.md` y `docs/PLAN_IMPLEMENTACION_UI.md` para tareas de interfaz. Las seis pantallas y su dirección visual están aprobadas; todavía no hay autorización para escribir código.
 
+## Regla de fidelidad visual
+Cuando implementes una pantalla a partir de una imagen de referencia:
+1. Analizá su estructura, proporciones, tipografía, colores, espaciados, radios e iconografía.
+2. Construí los componentes personalizados necesarios. No reemplaces un diseño custom por un widget genérico solo porque sea más fácil.
+3. Utilizá los recursos gráficos originales disponibles en el repositorio.
+4. Ejecutá la pantalla en un simulador o dispositivo, cuando esté disponible.
+5. Obtené una captura de pantalla y comparala con la referencia.
+6. Corregí las diferencias visuales importantes antes de considerar finalizada la tarea.
+7. Verificá que el diseño siga funcionando con textos largos, tamaños de fuente grandes y diferentes dimensiones de pantalla.
+
+**Objetivo:** reproducir el diseño aprobado con la mayor fidelidad posible, sin sacrificar accesibilidad ni funcionamiento.
+No afirmes que la pantalla coincide con el diseño si no realizaste una comparación visual.
+
 ## Tipografía obligatoria
 La familia visual aprobada es **Figtree Variable**. Antes de implementar UI, consultar `docs/TIPOGRAFIA.md`. No sustituirla por SF Pro o Roboto como fuente principal sin aprobación; mantener fallback del sistema. El archivo TTF aún debe incorporarse legalmente al proyecto.
 

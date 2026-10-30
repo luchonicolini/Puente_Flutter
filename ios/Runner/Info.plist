@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Puente necesita acceso al micrófono para transcribir en tiempo real lo que te dice la otra persona.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Puente utiliza el reconocimiento de voz para convertir las palabras de tu interlocutor en texto accesible en tu pantalla.</string>
 </dict>
 </plist>

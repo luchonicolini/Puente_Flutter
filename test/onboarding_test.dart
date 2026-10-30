@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:puente/core/storage/preferences_service.dart';
 import 'package:puente/features/home/home_screen.dart';
 import 'package:puente/features/onboarding/onboarding_screen.dart';
 import 'package:puente/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Onboarding flow matches design and navigation specifications',
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('Onboarding flow matches design, navigation and persists completion',
       (WidgetTester tester) async {
     // Definir tamaño de pantalla estándar móvil
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(const PuenteApp());
+    await tester.pumpWidget(const PuenteApp(showOnboarding: true));
     await tester.pumpAndSettle();
 
     // --- Pantalla 1: Bienvenida ---
@@ -51,18 +57,26 @@ void main() {
     expect(find.text('Volver'), findsOneWidget);
     expect(find.text('Empezar'), findsOneWidget);
 
-    // Tocar "Empezar" debe navegar a HomeScreen
+    // Tocar "Empezar" debe navegar a HomeScreen y persistir estado
     await tester.tap(find.text('Empezar'));
     await tester.pumpAndSettle();
 
     // Verifica que HomeScreen se haya montado
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('Iniciar conversación'), findsOneWidget);
+    expect(find.textContaining('Iniciar\nconversación'), findsOneWidget);
+
+    // Verifica que se haya guardado en preferencias
+    final prefs = await PreferencesService.getInstance();
+    expect(prefs.hasSeenOnboarding, isTrue);
   });
 
-  testWidgets('Tapping Omitir immediately navigates to HomeScreen',
+  testWidgets('Tapping Omitir immediately navigates to HomeScreen and persists completion',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const PuenteApp());
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(const PuenteApp(showOnboarding: true));
     await tester.pumpAndSettle();
 
     expect(find.byType(OnboardingScreen), findsOneWidget);
@@ -71,6 +85,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    expect(find.text('Iniciar conversación'), findsOneWidget);
+    expect(find.textContaining('Iniciar\nconversación'), findsOneWidget);
+
+    final prefs = await PreferencesService.getInstance();
+    expect(prefs.hasSeenOnboarding, isTrue);
+  });
+
+  testWidgets('PuenteApp opens HomeScreen directly when showOnboarding is false',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const PuenteApp(showOnboarding: false));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(OnboardingScreen), findsNothing);
   });
 }

@@ -3,7 +3,7 @@
 ## Fuente elegida
 **Figtree Variable**, archivo previsto `Figtree-Variable.ttf`. Fuente principal para las seis pantallas, tanto en iOS como Android. Familia Flutter: `Figtree`.
 
-**Estado:** decisión tipográfica solicitada por el usuario y documentada. El archivo TTF aún no está incluido en el repositorio; incorporarlo desde una fuente legítima, verificar licencia OFL y conservar el archivo de licencia correspondiente. No afirmar que la fuente ya se renderiza en la app.
+**Estado:** Fuente incorporada físicamente en `assets/fonts/Figtree-Variable.ttf` bajo licencia SIL Open Font License (OFL) 1.1 (`assets/fonts/OFL.txt`) y registrada en `pubspec.yaml` bajo la familia `Figtree`. Aplicada en `AppTheme` con fallback al sistema operativo.
 
 ## Escala base (tamaños lógicos de Flutter)
 | Token | Tamaño | Peso | Uso |

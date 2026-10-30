@@ -20,6 +20,7 @@ void main() {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(createHomeScreen());
     await tester.pumpAndSettle();
@@ -78,10 +79,18 @@ void main() {
 
   testWidgets('Tapping Ver ejemplo opens ShowMessageScreen with presentation',
       (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(createHomeScreen());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Ver ejemplo'));
+    final verEjemploFinder = find.text('Ver ejemplo');
+    await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.tap(verEjemploFinder);
     await tester.pumpAndSettle();
 
     expect(find.byType(ShowMessageScreen), findsOneWidget);

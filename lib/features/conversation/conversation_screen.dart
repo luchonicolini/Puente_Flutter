@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../core/services/speech_service.dart';
+import '../../core/services/tts_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/not_understood_sheet.dart';
+import '../../domain/services/sensitive_data_detector.dart';
 import '../confirmation/confirmation_screen.dart';
 import '../expression/expression_screen.dart';
 import '../show_message/show_message_screen.dart';
@@ -12,9 +15,13 @@ class ConversationScreen extends StatefulWidget {
   const ConversationScreen({
     super.key,
     this.initialContext,
+    this.speechService,
+    this.ttsService,
   });
 
   final String? initialContext;
+  final SpeechService? speechService;
+  final TtsService? ttsService;
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -23,14 +30,23 @@ class ConversationScreen extends StatefulWidget {
 class _ConversationScreenState extends State<ConversationScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isListening = false;
+
+  late final SpeechService _speechService;
+  late final TtsService _ttsService;
+  SpeechState _speechState = SpeechState.uninitialized;
   bool _isMuted = false;
+  String _liveRecognizedWords = '';
 
   late final List<ChatMessage> _messages;
 
   @override
   void initState() {
     super.initState();
+    _speechService = widget.speechService ?? SpeechServiceImpl();
+    _ttsService = widget.ttsService ?? TtsServiceImpl();
+    _speechState = _speechService.state;
+    _ttsService.initialize();
+
     _messages = <ChatMessage>[
       ChatMessage(
         id: '1',
@@ -59,6 +75,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   void dispose() {
+    _speechService.dispose();
+    _ttsService.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -102,61 +120,235 @@ class _ConversationScreenState extends State<ConversationScreen> {
     });
   }
 
-  void _toggleMic() {
-    setState(() {
-      _isListening = !_isListening;
-    });
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isListening
-              ? 'Micrófono activado: escuchando al interlocutor...'
-              : 'Micrófono detenido.',
-        ),
-        duration: const Duration(seconds: 2),
-      ),
+  void _showNoticeDialog({
+    required String title,
+    required String message,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: AppTypography.screenTitle(
+              isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
+          content: Text(
+            message,
+            style: AppTypography.body(
+              isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  void _toggleMute() {
+  Future<void> _handleMicTap() async {
+    if (_isMuted) {
+      _showNoticeDialog(
+        title: 'Micrófono silenciado',
+        message:
+            'El micrófono se encuentra silenciado. Reactivalo tocando el ícono de micrófono silenciado en la barra inferior.',
+      );
+      return;
+    }
+
+    if (_speechState == SpeechState.listening) {
+      await _speechService.stopListening();
+      if (mounted) {
+        setState(() {
+          _speechState = _speechService.state;
+          _liveRecognizedWords = '';
+        });
+      }
+      return;
+    }
+
+    final initialized = await _speechService.initialize(
+      onStateChanged: (state) {
+        if (mounted) {
+          setState(() {
+            _speechState = state;
+          });
+        }
+      },
+      onError: (errorMessage) {
+        if (mounted) {
+          setState(() {
+            _speechState = SpeechState.error;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error de micrófono: $errorMessage')),
+          );
+        }
+      },
+    );
+
+    if (!initialized) {
+      if (!mounted) return;
+      if (_speechService.state == SpeechState.denied) {
+        _showNoticeDialog(
+          title: 'Permiso de micrófono necesario',
+          message:
+              'Para poder transcribir lo que dice la otra persona, Puente necesita permiso para acceder al micrófono. Podés otorgarlo desde la configuración del dispositivo.',
+        );
+      } else {
+        _showNoticeDialog(
+          title: 'Micrófono no disponible',
+          message:
+              'El servicio de reconocimiento de voz no está disponible en este momento en tu dispositivo.',
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _liveRecognizedWords = '';
+    });
+
+    await _speechService.startListening(
+      onResult: (words, isFinal) {
+        if (!mounted) return;
+        setState(() {
+          _liveRecognizedWords = words;
+        });
+
+        if (isFinal && words.trim().isNotEmpty) {
+          _handleReceivedTranscription(words.trim());
+          setState(() {
+            _liveRecognizedWords = '';
+          });
+        }
+      },
+    );
+  }
+
+  void _handleReceivedTranscription(String text) {
+    final now = DateTime.now();
+    final minuteStr = now.minute.toString().padLeft(2, '0');
+    final formattedTime = '${now.hour}:$minuteStr';
+
+    final detectedItems = const SensitiveDataDetector().extract(text);
+    DetectedInfo? detectedInfo;
+    if (detectedItems.isNotEmpty) {
+      final itemsMap = <String, String>{};
+      for (final item in detectedItems) {
+        final label = item.label ?? item.category.displayName;
+        String key = label;
+        int counter = 1;
+        while (itemsMap.containsKey(key)) {
+          counter++;
+          key = '$label $counter';
+        }
+        itemsMap[key] = item.detectedValue;
+      }
+      detectedInfo = DetectedInfo(
+        title: 'Información detectada',
+        items: itemsMap,
+        isConfirmed: false,
+      );
+    }
+
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          id: now.millisecondsSinceEpoch.toString(),
+          text: text,
+          sender: MessageSender.interlocutor,
+          timestamp: now,
+          timeFormatted: formattedTime,
+          detectedInfo: detectedInfo,
+        ),
+      );
+    });
+    _scrollToBottom();
+  }
+
+  void _handleMuteTap() {
     setState(() {
       _isMuted = !_isMuted;
     });
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    if (_isMuted && _speechState == SpeechState.listening) {
+      _speechService.stopListening();
+    }
+
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isMuted ? 'Entrada de audio silenciada.' : 'Entrada de audio activa.',
+          _isMuted
+              ? 'Micrófono silenciado'
+              : 'Micrófono activo para escuchar',
         ),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _playLastMessageTts() {
-    if (_messages.isEmpty) return;
-    final last = _messages.last;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo en voz alta: "${last.text}"'),
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
+  Future<void> _playLastMessageTts() async {
+    if (_ttsService.isSpeaking) {
+      await _ttsService.stop();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (_messages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay mensajes para reproducir en voz alta.')),
+      );
+      return;
+    }
+
+    final messageToPlay = _messages.last.text;
+    await _ttsService.speak(messageToPlay);
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo: "$messageToPlay"'),
+          action: SnackBarAction(
+            label: 'Detener',
+            onPressed: () async {
+              await _ttsService.stop();
+              if (mounted) setState(() {});
+            },
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleConfirmInfo(ChatMessage message) async {
     final detected = message.detectedInfo;
-    final firstValue = detected?.items.values.first ?? '\$35.000';
+    if (detected == null || detected.items.isEmpty) return;
+
+    final firstEntry = detected.items.entries.first;
+    final firstValue = firstEntry.value;
+    final firstKey = firstEntry.key.toLowerCase();
+
+    String category = 'Importe';
+    if (firstKey.contains('horario')) {
+      category = 'Horario';
+    } else if (firstKey.contains('fecha')) {
+      category = 'Fecha';
+    }
 
     final confirmed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (context) => ConfirmationScreen(
           initialDetectedValue: firstValue,
-          category: 'Importe',
+          category: category,
         ),
       ),
     );
@@ -185,19 +377,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (approvedText != null && approvedText.isNotEmpty && mounted) {
       _textController.text = approvedText;
     }
-  }
-
-  void _handleShowMessage() {
-    final text = _textController.text.trim();
-    final textToShow = text.isNotEmpty ? text : 'Hola, nos comunicamos por escrito.';
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ShowMessageScreen(
-          initialText: textToShow,
-          isPresentation: false,
-        ),
-      ),
-    );
   }
 
   void _handlePresentation() {
@@ -297,39 +476,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Indicador si el micrófono está escuchando activamente
-              if (_isListening)
-                Container(
-                  color: AppColors.primaryTealLight,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.mic_rounded,
-                        color: AppColors.primaryTeal,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Escuchando audio del interlocutor...',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontFamilyFallback: AppTypography.fontFallback,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primaryTealDark,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _toggleMic,
-                        child: const Text('Detener'),
-                      ),
-                    ],
-                  ),
-                ),
-
               // Lista de mensajes de conversación
               Expanded(
                 child: ListView.builder(
@@ -417,6 +563,59 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   },
                 ),
               ),
+
+              // Indicador en vivo si el micrófono está escuchando
+              if (_speechState == SpeechState.listening)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTeal.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.primaryTeal.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primaryTeal,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _liveRecognizedWords.isEmpty
+                              ? 'Escuchando a la otra persona…'
+                              : 'Escuchando: "$_liveRecognizedWords"',
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontFamilyFallback: AppTypography.fontFallback,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () => _speechService.stopListening(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Detener'),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Panel inferior de interacción (Accesos de 1 toque + Compositor + Control de micrófono)
               Container(
@@ -568,29 +767,38 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         IconButton(
                           icon: Icon(
                             _isMuted ? Icons.mic_off : Icons.mic_off_outlined,
-                            color: _isMuted ? AppColors.error : (isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99)),
+                            color: _isMuted
+                                ? AppColors.error
+                                : (isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99)),
                           ),
-                          tooltip: _isMuted ? 'Audio silenciado' : 'Silenciar entrada',
-                          onPressed: _toggleMute,
+                          tooltip: _isMuted ? 'Reactivar micrófono' : 'Silenciar micrófono',
+                          onPressed: _handleMuteTap,
                         ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Semantics(
                               button: true,
-                              label: _isListening ? 'Detener micrófono' : 'Tocar para hablar',
+                              label: _speechState == SpeechState.listening
+                                  ? 'Detener escucha de micrófono'
+                                  : (_isMuted ? 'Micrófono silenciado' : 'Iniciar reconocimiento de voz'),
                               child: InkWell(
-                                onTap: _toggleMic,
+                                onTap: _handleMicTap,
                                 borderRadius: BorderRadius.circular(33),
                                 child: Container(
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: _isListening ? Colors.red : AppColors.primaryTeal,
+                                    color: _speechState == SpeechState.listening
+                                        ? AppColors.error
+                                        : AppColors.primaryTeal,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: (_isListening ? Colors.red : AppColors.primaryTeal).withValues(alpha: 0.35),
+                                        color: (_speechState == SpeechState.listening
+                                                ? AppColors.error
+                                                : AppColors.primaryTeal)
+                                            .withValues(alpha: 0.35),
                                         offset: const Offset(0, 4),
                                         blurRadius: 14,
                                       ),
@@ -598,7 +806,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                   ),
                                   child: Center(
                                     child: Icon(
-                                      _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                                      _speechState == SpeechState.listening
+                                          ? Icons.stop_rounded
+                                          : Icons.mic_rounded,
                                       color: Colors.white,
                                       size: 30,
                                     ),
@@ -608,23 +818,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _isListening ? 'Escuchando...' : 'Tocá para hablar',
+                              _speechState == SpeechState.listening
+                                  ? 'Escuchando…'
+                                  : (_isMuted ? 'Silenciado' : 'Tocá para hablar'),
                               style: TextStyle(
                                 fontFamily: AppTypography.fontFamily,
                                 fontFamilyFallback: AppTypography.fontFallback,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: _isListening ? Colors.red : textSecondary,
+                                color: _speechState == SpeechState.listening
+                                    ? AppColors.error
+                                    : textSecondary,
                               ),
                             ),
                           ],
                         ),
                         IconButton(
                           icon: Icon(
-                            Icons.volume_up_outlined,
-                            color: isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99),
+                            _ttsService.isSpeaking
+                                ? Icons.stop_circle_outlined
+                                : Icons.volume_up_outlined,
+                            color: _ttsService.isSpeaking
+                                ? AppColors.primaryTeal
+                                : (isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99)),
                           ),
-                          tooltip: 'Reproducir último mensaje en voz alta',
+                          tooltip: _ttsService.isSpeaking
+                              ? 'Detener reproducción en voz alta'
+                              : 'Reproducir último mensaje en voz alta',
                           onPressed: _playLastMessageTts,
                         ),
                       ],

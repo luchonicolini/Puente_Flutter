@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../domain/models/sensitive_data_item.dart';
+import '../../domain/services/sensitive_data_comparator.dart';
 
 class ConfirmationScreen extends StatefulWidget {
   const ConfirmationScreen({
@@ -46,17 +48,16 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
     final written = _writtenController.text.trim();
     if (written.isEmpty) return;
 
-    // Normalización simple para comparación
-    final normDetected = widget.initialDetectedValue
-        .replaceAll(RegExp(r'[\$,\.\s]'), '')
-        .toLowerCase();
-    final normWritten = written
-        .replaceAll(RegExp(r'[\$,\.\s]'), '')
-        .toLowerCase();
+    final category = SensitiveDataCategory.fromString(_selectedCategory);
+    final result = const SensitiveDataComparator().compare(
+      detected: widget.initialDetectedValue,
+      written: written,
+      category: category,
+    );
 
     setState(() {
       _hasCompared = true;
-      _isMatch = normDetected == normWritten;
+      _isMatch = result.isMatch;
     });
   }
 
@@ -113,10 +114,12 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
                         children: [
                           const Icon(Icons.mic_none_rounded, color: AppColors.warning, size: 20),
                           const SizedBox(width: 8),
-                          Text(
-                            'Valor detectado en conversación:',
-                            style: AppTypography.metadata(AppColors.warning)
-                                .copyWith(fontWeight: FontWeight.w600),
+                          Expanded(
+                            child: Text(
+                              'Valor detectado en conversación:',
+                              style: AppTypography.metadata(AppColors.warning)
+                                  .copyWith(fontWeight: FontWeight.w600),
+                            ),
                           ),
                         ],
                       ),
@@ -194,10 +197,12 @@ class _ConfirmationScreenState extends State<ConfirmationScreen> {
                             color: _isMatch ? AppColors.success : AppColors.error,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            _isMatch ? 'Los datos coinciden' : 'Los datos son diferentes',
-                            style: AppTypography.sectionTitle(
-                              _isMatch ? AppColors.success : AppColors.error,
+                          Expanded(
+                            child: Text(
+                              _isMatch ? 'Los datos coinciden' : 'Los datos son diferentes',
+                              style: AppTypography.sectionTitle(
+                                _isMatch ? AppColors.success : AppColors.error,
+                              ),
                             ),
                           ),
                         ],

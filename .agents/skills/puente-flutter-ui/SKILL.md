@@ -16,7 +16,8 @@ Para pantallas, componentes, navegación, tema, onboarding y assets visuales. No
 1. Leer `docs/DISENO_VISUAL.md`, `docs/TIPOGRAFIA.md`, `docs/FLUJOS_USUARIO.md` y, si aplica, `docs/ONBOARDING.md`.
 2. Identificar pantalla, estados (vacío, cargando, error, permisos, teclado), entradas y salidas.
 3. Proponer árbol de widgets, rutas y componentes reutilizables; solicitar aprobación para cambios importantes.
-4. Al autorizarse código, usar Flutter/Dart, Figtree Variable (cuando esté disponible legalmente), tema centralizado y tamaños adaptativos.
+4. Al autorizarse código, aplicar la **Regla de fidelidad visual**: analizar proporciones, tipografía, colores, espaciados y radios; construir componentes personalizados sin recurrir a widgets genéricos por comodidad; capturar y comparar visualmente frente a la referencia.
+5. Usar Flutter/Dart, Figtree Variable (`Figtree-Variable.ttf`), tema centralizado y tamaños adaptativos.
 5. Mantener visibles acciones críticas en Conversación: «No entendí», «Presentarme» y control explícito del micrófono.
 6. En onboarding: tres pasos, primera apertura, Omitir, Siguiente, Volver, Empezar; sin permisos ni registro. Las imágenes están pendientes de verificar en el repo.
 7. Revisar tamaños de fuente, contraste, safe areas, pantallas pequeñas, modo oscuro y navegación accesible.

@@ -4,21 +4,30 @@ import 'package:puente/features/home/home_screen.dart';
 import 'package:puente/main.dart';
 
 void main() {
-  testWidgets('PuenteApp renders HomeScreen with title and CTA', (WidgetTester tester) async {
+  testWidgets('PuenteApp renders HomeScreen with title and CTA by default',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
     await tester.pumpWidget(const PuenteApp());
+    await tester.pumpAndSettle();
 
-    // Verifica que el título "Puente" y el slogan estén presentes
+    // Verifica que HomeScreen se haya montado
+    expect(find.byType(HomeScreen), findsOneWidget);
+
+    // Verifica la marca y el titular
     expect(find.text('Puente'), findsOneWidget);
-    expect(find.textContaining('Tu independencia'), findsOneWidget);
+    expect(find.textContaining('Comunicarnos'), findsOneWidget);
 
-    // Verifica que el botón de Iniciar conversación esté disponible
-    expect(find.text('Iniciar conversación'), findsOneWidget);
+    // Verifica el CTA principal
+    expect(find.textContaining('Iniciar\nconversación'), findsOneWidget);
 
-    // Verifica que los accesos secundarios estén disponibles
+    // Verifica los accesos secundarios
     expect(find.text('Frases rápidas'), findsOneWidget);
     expect(find.text('Expresar'), findsOneWidget);
 
-    // Verifica el acceso de un toque a Presentarme
-    expect(find.text('Presentarme con un toque'), findsOneWidget);
+    // Verifica el banner de presentación
+    expect(find.text('Ver ejemplo'), findsOneWidget);
   });
 }

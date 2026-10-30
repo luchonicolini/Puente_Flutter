@@ -1,7 +1,7 @@
 # Onboarding de Puente — diseño aprobado
 
 ## Estado
-Flujo visual de tres pantallas aprobado por el usuario e **implementado en Flutter** (`lib/features/onboarding/onboarding_screen.dart`). Los 3 recursos gráficos (`onboarding_welcome.png`, `onboarding_communication.png`, `onboarding_independence.png`) fueron incorporados en `assets/images/onboarding/` y registrados en `pubspec.yaml`.
+Flujo visual de tres pantallas aprobado por el usuario e **implementado en Flutter** (`lib/features/onboarding/onboarding_screen.dart`) con persistencia local mediante `PreferencesService` (`shared_preferences`). Los 3 recursos gráficos (`onboarding_welcome.png`, `onboarding_communication.png`, `onboarding_independence.png`) están incorporados en `assets/images/onboarding/` y registrados en `pubspec.yaml`.
 
 ## Comportamiento
 - Mostrar únicamente en el primer inicio de la instalación.

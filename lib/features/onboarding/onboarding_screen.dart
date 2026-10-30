@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/storage/preferences_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/puente_brand_logo.dart';
@@ -61,7 +62,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  void _finish() {
+  Future<void> _finish() async {
+    try {
+      final prefs = await PreferencesService.getInstance();
+      await prefs.setOnboardingCompleted(true);
+    } catch (_) {
+      // Si falla el almacenamiento local, no bloquear el acceso a la app
+    }
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
     );
@@ -244,7 +252,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // Barra inferior con controles y paginación
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
               child: SizedBox(
                 height: 52,
                 child: Row(
@@ -259,7 +267,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(16),
                           child: Container(
                             height: 50,
-                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: isDark ? AppColors.surfaceMutedDark : const Color(0xFFF1F4F6),
                               borderRadius: BorderRadius.circular(16),
@@ -307,7 +315,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
                           height: 50,
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             color: AppColors.primaryTeal,
                             borderRadius: BorderRadius.circular(16),
@@ -320,15 +328,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 style: const TextStyle(
                                   fontFamily: AppTypography.fontFamily,
                                   fontFamilyFallback: AppTypography.fontFallback,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               const Icon(
                                 Icons.arrow_forward_ios_rounded,
-                                size: 14,
+                                size: 13,
                                 color: Colors.white,
                               ),
                             ],
@@ -365,7 +373,7 @@ class _DotsIndicator extends StatelessWidget {
         final isActive = index == currentIndex;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
           width: 8,
           height: 8,
           decoration: BoxDecoration(

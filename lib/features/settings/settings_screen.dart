@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/storage/preferences_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -16,6 +17,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hapticFeedback = true;
   bool _speakResponsesAutomatically = false;
   bool _optInStorage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await PreferencesService.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _themeMode = prefs.themeMode;
+      _speechRate = prefs.speechRate;
+      _hapticFeedback = prefs.hapticFeedback;
+      _speakResponsesAutomatically = prefs.speakResponsesAutomatically;
+      _optInStorage = prefs.optInStorage;
+    });
+  }
+
+  Future<void> _updateThemeMode(ThemeMode mode) async {
+    setState(() => _themeMode = mode);
+    final prefs = await PreferencesService.getInstance();
+    await prefs.setThemeMode(mode);
+  }
+
+  Future<void> _updateHapticFeedback(bool value) async {
+    setState(() => _hapticFeedback = value);
+    final prefs = await PreferencesService.getInstance();
+    await prefs.setHapticFeedback(value);
+  }
+
+  Future<void> _updateSpeakResponsesAutomatically(bool value) async {
+    setState(() => _speakResponsesAutomatically = value);
+    final prefs = await PreferencesService.getInstance();
+    await prefs.setSpeakResponsesAutomatically(value);
+  }
+
+  Future<void> _updateSpeechRate(double value) async {
+    setState(() => _speechRate = value);
+    final prefs = await PreferencesService.getInstance();
+    await prefs.setSpeechRate(value);
+  }
+
+  Future<void> _updateOptInStorage(bool value) async {
+    setState(() => _optInStorage = value);
+    final prefs = await PreferencesService.getInstance();
+    await prefs.setOptInStorage(value);
+  }
 
   void _showClearDataDialog() {
     showDialog<void>(
@@ -42,10 +91,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-              onPressed: () {
+              onPressed: () async {
+                final prefs = await PreferencesService.getInstance();
+                await prefs.clearAll();
+                if (!context.mounted) return;
+                setState(() {
+                  _themeMode = ThemeMode.system;
+                  _speechRate = 1.0;
+                  _hapticFeedback = true;
+                  _speakResponsesAutomatically = false;
+                  _optInStorage = false;
+                });
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Datos locales eliminados.')),
+                  const SnackBar(
+                    content: Text('Datos locales eliminados y preferencias restablecidas.'),
+                  ),
                 );
               },
               child: const Text('Borrar datos'),
@@ -103,7 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                       onChanged: (mode) {
                         if (mode != null) {
-                          setState(() => _themeMode = mode);
+                          _updateThemeMode(mode);
                         }
                       },
                     ),
@@ -123,16 +184,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text('Vibración táctil', style: AppTypography.body(textPrimary)),
                     subtitle: Text('Confirmaciones al interactuar', style: AppTypography.metadata(textSecondary)),
                     value: _hapticFeedback,
-                    activeColor: AppColors.primaryTeal,
-                    onChanged: (val) => setState(() => _hapticFeedback = val),
+                    activeThumbColor: AppColors.primaryTeal,
+                    onChanged: _updateHapticFeedback,
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
                     title: Text('Reproducir voz automáticamente', style: AppTypography.body(textPrimary)),
                     subtitle: Text('Leer mensajes nuevos en voz alta', style: AppTypography.metadata(textSecondary)),
                     value: _speakResponsesAutomatically,
-                    activeColor: AppColors.primaryTeal,
-                    onChanged: (val) => setState(() => _speakResponsesAutomatically = val),
+                    activeThumbColor: AppColors.primaryTeal,
+                    onChanged: _updateSpeakResponsesAutomatically,
                   ),
                   const Divider(height: 1),
                   Padding(
@@ -143,7 +204,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Velocidad de síntesis (TTS)', style: AppTypography.body(textPrimary)),
+                            Expanded(
+                              child: Text('Velocidad de síntesis (TTS)', style: AppTypography.body(textPrimary)),
+                            ),
+                            const SizedBox(width: 8),
                             Text('${_speechRate.toStringAsFixed(1)}x', style: AppTypography.metadata(textSecondary)),
                           ],
                         ),
@@ -154,6 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           divisions: 10,
                           activeColor: AppColors.primaryTeal,
                           onChanged: (val) => setState(() => _speechRate = val),
+                          onChangeEnd: _updateSpeechRate,
                         ),
                       ],
                     ),
@@ -194,8 +259,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       style: AppTypography.metadata(textSecondary),
                     ),
                     value: _optInStorage,
-                    activeColor: AppColors.primaryTeal,
-                    onChanged: (val) => setState(() => _optInStorage = val),
+                    activeThumbColor: AppColors.primaryTeal,
+                    onChanged: _updateOptInStorage,
                   ),
                   const Divider(height: 1),
                   ListTile(
