@@ -211,4 +211,24 @@ void main() {
 
     expect(find.text('Restaurar predeterminado'), findsOneWidget);
   });
+
+  testWidgets('Muestra seccion Acerca de con licencias y version de la app', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(createSettingsScreen());
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Puente v1.0.0 (MVP)'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acerca de'), findsOneWidget);
+    expect(find.text('Cómo usar Puente'), findsOneWidget);
+    expect(find.text('Licencias de código abierto'), findsOneWidget);
+    expect(find.text('Puente v1.0.0 (MVP)'), findsOneWidget);
+    expect(find.text('Software accesible y de código abierto'), findsOneWidget);
+  });
 }

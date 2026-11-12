@@ -372,6 +372,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 18),
+            _SectionLabel('Acerca de', color: textPrimary),
+            const SizedBox(height: 8),
             _SettingsCard(
               children: [
                 _ArrowRow(
@@ -384,7 +386,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ),
+                _Divider(isDark: isDark),
+                _ArrowRow(
+                  icon: Icons.gavel_outlined,
+                  label: 'Licencias de código abierto',
+                  onTap: () => showLicensePage(
+                    context: context,
+                    applicationName: 'Puente',
+                    applicationVersion: '1.0.0',
+                    applicationLegalese:
+                        'Tu independencia, tu manera de comunicarte.',
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    'Puente v1.0.0 (MVP)',
+                    style: AppTypography.metadata(textSecondary).copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Software accesible y de código abierto',
+                    style: AppTypography.metadata(textSecondary).copyWith(
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
