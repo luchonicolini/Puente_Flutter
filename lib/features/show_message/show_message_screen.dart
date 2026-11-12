@@ -65,6 +65,7 @@ class _ShowMessageScreenBodyState
   late final TextEditingController _editController;
   late final TtsService _ttsService;
   bool _isFlipped = false;
+  bool _isHighContrast = false;
   bool _savePresentationAsDefault = false;
   double _fontSize = 40.0;
   TopAlertData? _activeAlert;
@@ -174,10 +175,17 @@ class _ShowMessageScreenBodyState
 
   Widget _buildMessageContent(Color textPrimary, Color textSecondary) {
     if (!widget.isPresentation) {
+      final style = _isHighContrast
+          ? AppTypography.showMessage(
+              Colors.black,
+              fontSize: _fontSize,
+            ).copyWith(fontWeight: FontWeight.w900)
+          : AppTypography.showMessage(textPrimary, fontSize: _fontSize);
+
       return Text(
         _currentText,
         textAlign: TextAlign.center,
-        style: AppTypography.showMessage(textPrimary, fontSize: _fontSize),
+        style: style,
       );
     }
 
@@ -190,25 +198,35 @@ class _ShowMessageScreenBodyState
         ? paragraphs.sublist(1)
         : const <String>[];
 
+    final headingStyle = _isHighContrast
+        ? AppTypography.showMessage(
+            Colors.black,
+            fontSize: _fontSize,
+          ).copyWith(fontWeight: FontWeight.w900)
+        : AppTypography.showMessage(textPrimary, fontSize: _fontSize);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           heading,
-          style: AppTypography.showMessage(textPrimary, fontSize: _fontSize),
+          style: headingStyle,
         ),
         for (final paragraph in body) ...[
           const SizedBox(height: 22),
           Text(
             paragraph,
-            style:
-                AppTypography.body(
-                  paragraph == body.last ? textSecondary : textPrimary,
-                ).copyWith(
-                  fontWeight: paragraph == body.last
-                      ? FontWeight.w400
-                      : FontWeight.w600,
-                ),
+            style: _isHighContrast
+                ? AppTypography.body(Colors.black).copyWith(
+                    fontWeight: FontWeight.w700,
+                  )
+                : AppTypography.body(
+                    paragraph == body.last ? textSecondary : textPrimary,
+                  ).copyWith(
+                    fontWeight: paragraph == body.last
+                        ? FontWeight.w400
+                        : FontWeight.w600,
+                  ),
           ),
         ],
       ],
@@ -299,17 +317,45 @@ class _ShowMessageScreenBodyState
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+      backgroundColor: _isHighContrast
+          ? Colors.white
+          : (isDark ? AppColors.backgroundDark : Colors.white),
       appBar: AppBar(
+        backgroundColor: _isHighContrast ? Colors.white : null,
+        foregroundColor: _isHighContrast ? Colors.black : null,
+        iconTheme: _isHighContrast
+            ? const IconThemeData(color: Colors.black)
+            : null,
         title: Text(
           widget.isPresentation ? 'Presentarme' : 'Mostrar mensaje',
-          style: AppTypography.sectionTitle(textPrimary),
+          style: AppTypography.sectionTitle(
+            _isHighContrast ? Colors.black : textPrimary,
+          ),
         ),
         actions: _isEditing
             ? null
             : [
                 IconButton(
-                  icon: const Icon(Icons.text_fields_rounded),
+                  icon: Icon(
+                    _isHighContrast
+                        ? Icons.wb_sunny_rounded
+                        : Icons.wb_sunny_outlined,
+                    color: _isHighContrast ? Colors.black : null,
+                  ),
+                  tooltip: _isHighContrast
+                      ? 'Desactivar modo sol'
+                      : 'Activar modo sol (máximo contraste)',
+                  onPressed: () {
+                    setState(() {
+                      _isHighContrast = !_isHighContrast;
+                    });
+                  },
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.text_fields_rounded,
+                    color: _isHighContrast ? Colors.black : null,
+                  ),
                   tooltip: 'Cambiar tamaño de texto',
                   onPressed: () {
                     setState(() {
@@ -318,7 +364,10 @@ class _ShowMessageScreenBodyState
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: _isHighContrast ? Colors.black : null,
+                  ),
                   tooltip: 'Editar texto',
                   onPressed: _startEditing,
                 ),
@@ -374,9 +423,12 @@ class _ShowMessageScreenBodyState
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
-                          color: isDark
-                              ? AppColors.borderDark
-                              : AppColors.borderLight,
+                          color: _isHighContrast
+                              ? Colors.black
+                              : (isDark
+                                  ? AppColors.borderDark
+                                  : AppColors.borderLight),
+                          width: _isHighContrast ? 2 : 1,
                         ),
                       ),
                     ),
@@ -385,7 +437,9 @@ class _ShowMessageScreenBodyState
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryTeal,
+                              backgroundColor: _isHighContrast
+                                  ? Colors.black
+                                  : AppColors.primaryTeal,
                               foregroundColor: Colors.white,
                               minimumSize: const Size(0, 48),
                               padding: const EdgeInsets.symmetric(
@@ -405,6 +459,14 @@ class _ShowMessageScreenBodyState
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
+                              foregroundColor:
+                                  _isHighContrast ? Colors.black : null,
+                              side: _isHighContrast
+                                  ? const BorderSide(
+                                      color: Colors.black,
+                                      width: 2,
+                                    )
+                                  : null,
                               minimumSize: const Size(0, 48),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,

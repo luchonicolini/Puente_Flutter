@@ -117,7 +117,7 @@ class _QuickPhrasesSheetState extends ConsumerState<QuickPhrasesSheet> {
         isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final accentColor = isDark
         ? AppColors.primaryTealOnDark
-        : AppColors.primaryTeal;
+        : AppColors.primaryTealDark;
 
     return Container(
       decoration: BoxDecoration(

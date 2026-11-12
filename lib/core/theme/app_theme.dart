@@ -66,19 +66,19 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryTeal,
+          foregroundColor: AppColors.primaryTealDark,
           minimumSize: const Size(double.infinity, 48),
-          side: const BorderSide(color: AppColors.primaryTeal, width: 1.5),
+          side: const BorderSide(color: AppColors.primaryTealDark, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: AppTypography.button(AppColors.primaryTeal),
+          textStyle: AppTypography.button(AppColors.primaryTealDark),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryTeal,
-          textStyle: AppTypography.button(AppColors.primaryTeal),
+          foregroundColor: AppColors.primaryTealDark,
+          textStyle: AppTypography.button(AppColors.primaryTealDark),
         ),
       ),
       dividerTheme: const DividerThemeData(

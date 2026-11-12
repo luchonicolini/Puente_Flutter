@@ -269,7 +269,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   fontWeight: FontWeight.w700,
                                   color: isDark
                                       ? AppColors.primaryTealOnDark
-                                      : AppColors.primaryTeal,
+                                      : AppColors.primaryTealDark,
                                   letterSpacing: 0.5,
                                 ),
                               ),

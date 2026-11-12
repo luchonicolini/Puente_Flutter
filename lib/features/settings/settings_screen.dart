@@ -481,7 +481,7 @@ class _InfoRow extends StatelessWidget {
         : AppColors.textSecondaryLight;
     final accentColor = isDark
         ? AppColors.primaryTealOnDark
-        : AppColors.primaryTeal;
+        : AppColors.primaryTealDark;
     return ListTile(
       dense: true,
       minVerticalPadding: 8,
@@ -516,7 +516,7 @@ class _ArrowRow extends StatelessWidget {
         : AppColors.textSecondaryLight;
     final accentColor = isDark
         ? AppColors.primaryTealOnDark
-        : AppColors.primaryTeal;
+        : AppColors.primaryTealDark;
     final errorColor = isDark ? AppColors.errorTextDark : AppColors.error;
     final color = isDestructive ? errorColor : textPrimary;
     return ListTile(
@@ -729,7 +729,7 @@ class _PresentationEditorSheetState extends State<_PresentationEditorSheet> {
         : AppColors.textSecondaryLight;
     final accentColor = isDark
         ? AppColors.primaryTealOnDark
-        : AppColors.primaryTeal;
+        : AppColors.primaryTealDark;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Container(

@@ -580,7 +580,7 @@ class _StatusNoticeCard extends StatelessWidget {
         : AppColors.textPrimaryLight;
     final accent = isWarning
         ? (isDark ? AppColors.warningTextDark : AppColors.warningTextLight)
-        : (isDark ? AppColors.primaryTealOnDark : AppColors.primaryTeal);
+        : (isDark ? AppColors.primaryTealOnDark : AppColors.primaryTealDark);
 
     return Semantics(
       liveRegion: true,

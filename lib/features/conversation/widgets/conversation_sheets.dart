@@ -78,7 +78,7 @@ class _InterlocutorWriteSheetState extends State<InterlocutorWriteSheet> {
                       Icons.edit_note_rounded,
                       color: isDark
                           ? AppColors.primaryTealOnDark
-                          : AppColors.primaryTeal,
+                          : AppColors.primaryTealDark,
                       size: 26,
                     ),
                     const SizedBox(width: 8),
@@ -257,7 +257,7 @@ class DetectedItemPickerSheet extends StatelessWidget {
                                 size: 16,
                                 color: isDark
                                     ? AppColors.primaryTealOnDark
-                                    : AppColors.primaryTeal,
+                                    : AppColors.primaryTealDark,
                               ),
                           ],
                         ),
@@ -456,7 +456,7 @@ class _InterlocutorDataRequestSheetState
                       Icons.fact_check_outlined,
                       color: isDark
                           ? AppColors.primaryTealOnDark
-                          : AppColors.primaryTeal,
+                          : AppColors.primaryTealDark,
                       size: 24,
                     ),
                     const SizedBox(width: 8),

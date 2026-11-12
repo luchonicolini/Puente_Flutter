@@ -39,7 +39,7 @@ class NotUnderstoodSheet extends StatelessWidget {
     final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final accentColor = isDark
         ? AppColors.primaryTealOnDark
-        : AppColors.primaryTeal;
+        : AppColors.primaryTealDark;
 
     return Container(
       decoration: BoxDecoration(

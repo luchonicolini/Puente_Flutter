@@ -187,4 +187,32 @@ void main() {
     expect(find.text('Reproducir'), findsOneWidget);
     expect(find.text('Girar 180°'), findsOneWidget);
   });
+
+  testWidgets('Alterna modo sol de contraste extremo para lectura en exteriores', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      createShowMessageScreen(
+        initialText: 'Texto para sol directo',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.wb_sunny_outlined), findsOneWidget);
+    expect(find.text('Texto para sol directo'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.wb_sunny_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.wb_sunny_rounded), findsOneWidget);
+    final textWidget = tester.widget<Text>(find.text('Texto para sol directo'));
+    expect(textWidget.style?.color, Colors.black);
+    expect(textWidget.style?.fontWeight, FontWeight.w900);
+
+    // Vuelve a modo estándar
+    await tester.tap(find.byIcon(Icons.wb_sunny_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.wb_sunny_outlined), findsOneWidget);
+  });
 }
