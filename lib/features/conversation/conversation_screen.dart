@@ -1,82 +1,142 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../core/services/speech_service.dart';
-import '../../core/services/tts_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/services/services_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/not_understood_sheet.dart';
-import '../../domain/services/sensitive_data_detector.dart';
+import '../../core/widgets/text_edit_dialog.dart';
+import '../../core/widgets/top_alert_banner.dart';
+import '../../domain/confirmation/data_comparison.dart';
 import '../confirmation/confirmation_screen.dart';
 import '../expression/expression_screen.dart';
+import '../quick_phrases/quick_phrases_sheet.dart';
 import '../show_message/show_message_screen.dart';
+import 'controllers/conversation_controller.dart';
 import 'models/chat_message.dart';
-import 'widgets/detected_info_card.dart';
+import 'widgets/conversation_bottom_panel.dart';
+import 'widgets/conversation_sheets.dart';
+import 'widgets/message_bubble.dart';
 
-class ConversationScreen extends StatefulWidget {
+class ConversationScreen extends StatelessWidget {
   const ConversationScreen({
     super.key,
     this.initialContext,
-    this.speechService,
-    this.ttsService,
+    this.onPresentationSaved,
+    this.onUseExpressionAiChanged,
   });
 
   final String? initialContext;
-  final SpeechService? speechService;
-  final TtsService? ttsService;
+  final ValueChanged<String>? onPresentationSaved;
+  final ValueChanged<bool>? onUseExpressionAiChanged;
 
   @override
-  State<ConversationScreen> createState() => _ConversationScreenState();
+  Widget build(BuildContext context) {
+    try {
+      ProviderScope.containerOf(context, listen: false);
+      return _ConversationScreenBody(
+        initialContext: initialContext,
+        onPresentationSaved: onPresentationSaved,
+        onUseExpressionAiChanged: onUseExpressionAiChanged,
+      );
+    } catch (_) {
+      return ProviderScope(
+        child: _ConversationScreenBody(
+          initialContext: initialContext,
+          onPresentationSaved: onPresentationSaved,
+          onUseExpressionAiChanged: onUseExpressionAiChanged,
+        ),
+      );
+    }
+  }
 }
 
-class _ConversationScreenState extends State<ConversationScreen> {
+class _ConversationScreenBody extends ConsumerStatefulWidget {
+  const _ConversationScreenBody({
+    this.initialContext,
+    this.onPresentationSaved,
+    this.onUseExpressionAiChanged,
+  });
+
+  final String? initialContext;
+  final ValueChanged<String>? onPresentationSaved;
+  final ValueChanged<bool>? onUseExpressionAiChanged;
+
+  @override
+  ConsumerState<_ConversationScreenBody> createState() =>
+      _ConversationScreenBodyState();
+}
+
+class _ConversationScreenBodyState
+    extends ConsumerState<_ConversationScreenBody>
+    with WidgetsBindingObserver {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  late final SpeechService _speechService;
-  late final TtsService _ttsService;
-  SpeechState _speechState = SpeechState.uninitialized;
-  bool _isMuted = false;
-  String _liveRecognizedWords = '';
+  late final ConversationController _controller;
+  MessageSender _composerSender = MessageSender.user;
 
-  late final List<ChatMessage> _messages;
+  TopAlertData? _activeAlert;
+  Timer? _alertTimer;
+
+  void _showAlert(TopAlertData alert) {
+    _alertTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _activeAlert = alert;
+      });
+    }
+    _alertTimer = Timer(alert.duration, () {
+      if (mounted) {
+        setState(() {
+          _activeAlert = null;
+        });
+      }
+    });
+  }
+
+  void _dismissAlert() {
+    _alertTimer?.cancel();
+    if (mounted) {
+      setState(() {
+        _activeAlert = null;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _speechService = widget.speechService ?? SpeechServiceImpl();
-    _ttsService = widget.ttsService ?? TtsServiceImpl();
-    _speechState = _speechService.state;
-    _ttsService.initialize();
+    _controller = ref.read(conversationControllerProvider.notifier);
+    WidgetsBinding.instance.addObserver(this);
+    if (widget.initialContext != null && widget.initialContext!.isNotEmpty) {
+      _textController.text = widget.initialContext!;
+    }
+  }
 
-    _messages = <ChatMessage>[
-      ChatMessage(
-        id: '1',
-        text: 'Hola, quiero saber cuánto cuesta la inscripción del gimnasio.',
-        sender: MessageSender.user,
-        timestamp: DateTime(2026, 10, 29, 9, 41),
-        timeFormatted: '9:41',
-      ),
-      ChatMessage(
-        id: '2',
-        text: 'La inscripción es de \$20.000 y la cuota mensual cuesta \$35.000.',
-        sender: MessageSender.interlocutor,
-        timestamp: DateTime(2026, 10, 29, 9, 42),
-        timeFormatted: '9:42',
-        detectedInfo: const DetectedInfo(
-          title: 'Información detectada',
-          items: {
-            'Inscripción': '\$20.000',
-            'Cuota mensual': '\$35.000',
-          },
-          isConfirmed: false,
-        ),
-      ),
-    ];
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // El diálogo de permiso del sistema puede emitir «inactive»; no hay que
+    // cancelar la solicitud en curso por ese motivo.
+    if (state == AppLifecycleState.inactive &&
+        _controller.isRequestingPermission) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(_controller.pauseAudio());
+    }
   }
 
   @override
   void dispose() {
-    _speechService.dispose();
-    _ttsService.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_controller.pauseAudio());
+    _alertTimer?.cancel();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -86,26 +146,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final text = textOverride ?? _textController.text.trim();
     if (text.isEmpty) return;
 
-    final now = DateTime.now();
-    final minuteStr = now.minute.toString().padLeft(2, '0');
-    final formattedTime = '${now.hour}:$minuteStr';
+    // Los pedidos de «No entendí» siempre son de la persona usuaria. El
+    // compositor respeta el turno elegido para que el interlocutor también
+    // pueda escribir sin que su mensaje se atribuya a la persona usuaria.
+    final sender = textOverride == null ? _composerSender : MessageSender.user;
+    _controller.sendMessage(text: text, sender: sender);
 
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          id: now.millisecondsSinceEpoch.toString(),
-          text: text,
-          sender: MessageSender.user,
-          timestamp: now,
-          timeFormatted: formattedTime,
-        ),
-      );
-      if (textOverride == null) {
-        _textController.clear();
-      }
-    });
+    if (textOverride == null) {
+      _textController.clear();
+    }
 
     _scrollToBottom();
+  }
+
+  void _setComposerSender(MessageSender sender) {
+    if (_composerSender == sender) return;
+    setState(() => _composerSender = sender);
   }
 
   void _scrollToBottom() {
@@ -120,256 +176,184 @@ class _ConversationScreenState extends State<ConversationScreen> {
     });
   }
 
-  void _showNoticeDialog({
-    required String title,
-    required String message,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            title,
-            style: AppTypography.screenTitle(
-              isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-          ),
-          content: Text(
-            message,
-            style: AppTypography.body(
-              isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Entendido'),
-            ),
-          ],
-        );
-      },
-    );
+  void _toggleMic() {
+    ref.read(conversationControllerProvider.notifier).toggleMic();
   }
 
-  Future<void> _handleMicTap() async {
-    if (_isMuted) {
-      _showNoticeDialog(
-        title: 'Micrófono silenciado',
-        message:
-            'El micrófono se encuentra silenciado. Reactivalo tocando el ícono de micrófono silenciado en la barra inferior.',
-      );
-      return;
-    }
-
-    if (_speechState == SpeechState.listening) {
-      await _speechService.stopListening();
-      if (mounted) {
-        setState(() {
-          _speechState = _speechService.state;
-          _liveRecognizedWords = '';
-        });
-      }
-      return;
-    }
-
-    final initialized = await _speechService.initialize(
-      onStateChanged: (state) {
-        if (mounted) {
-          setState(() {
-            _speechState = state;
-          });
-        }
-      },
-      onError: (errorMessage) {
-        if (mounted) {
-          setState(() {
-            _speechState = SpeechState.error;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error de micrófono: $errorMessage')),
-          );
-        }
-      },
+  Future<void> _editPendingTranscription(String transcription) async {
+    final reviewedText = await TextEditDialog.show(
+      context,
+      title: 'Revisar transcripción',
+      confirmLabel: 'Agregar',
+      initialText: transcription,
+      labelText: 'Texto detectado',
+      helperText: 'Corregilo antes de agregarlo a la conversación.',
+      minLines: 2,
+      maxLines: 5,
     );
 
-    if (!initialized) {
-      if (!mounted) return;
-      if (_speechService.state == SpeechState.denied) {
-        _showNoticeDialog(
-          title: 'Permiso de micrófono necesario',
-          message:
-              'Para poder transcribir lo que dice la otra persona, Puente necesita permiso para acceder al micrófono. Podés otorgarlo desde la configuración del dispositivo.',
-        );
-      } else {
-        _showNoticeDialog(
-          title: 'Micrófono no disponible',
-          message:
-              'El servicio de reconocimiento de voz no está disponible en este momento en tu dispositivo.',
-        );
-      }
-      return;
+    if (reviewedText != null && mounted) {
+      ref
+          .read(conversationControllerProvider.notifier)
+          .acceptPendingTranscription(reviewedText);
     }
-
-    setState(() {
-      _liveRecognizedWords = '';
-    });
-
-    await _speechService.startListening(
-      onResult: (words, isFinal) {
-        if (!mounted) return;
-        setState(() {
-          _liveRecognizedWords = words;
-        });
-
-        if (isFinal && words.trim().isNotEmpty) {
-          _handleReceivedTranscription(words.trim());
-          setState(() {
-            _liveRecognizedWords = '';
-          });
-        }
-      },
-    );
   }
 
-  void _handleReceivedTranscription(String text) {
-    final now = DateTime.now();
-    final minuteStr = now.minute.toString().padLeft(2, '0');
-    final formattedTime = '${now.hour}:$minuteStr';
+  void _toggleMute() {
+    unawaited(_controller.toggleMute());
+  }
 
-    final detectedItems = const SensitiveDataDetector().extract(text);
-    DetectedInfo? detectedInfo;
-    if (detectedItems.isNotEmpty) {
-      final itemsMap = <String, String>{};
-      for (final item in detectedItems) {
-        final label = item.label ?? item.category.displayName;
-        String key = label;
-        int counter = 1;
-        while (itemsMap.containsKey(key)) {
-          counter++;
-          key = '$label $counter';
-        }
-        itemsMap[key] = item.detectedValue;
-      }
-      detectedInfo = DetectedInfo(
-        title: 'Información detectada',
-        items: itemsMap,
-        isConfirmed: false,
-      );
-    }
-
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          id: now.millisecondsSinceEpoch.toString(),
-          text: text,
-          sender: MessageSender.interlocutor,
-          timestamp: now,
-          timeFormatted: formattedTime,
-          detectedInfo: detectedInfo,
+  void _playLastMessageTts() {
+    if (!ref.read(appPreferencesProvider).readMessages) {
+      _showAlert(
+        const TopAlertData(
+          message: 'La reproducción de voz está desactivada en Preferencias.',
+          type: AlertType.warning,
+          icon: Icons.volume_off_rounded,
         ),
       );
-    });
-    _scrollToBottom();
-  }
-
-  void _handleMuteTap() {
-    setState(() {
-      _isMuted = !_isMuted;
-    });
-
-    if (_isMuted && _speechState == SpeechState.listening) {
-      _speechService.stopListening();
+      return;
     }
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isMuted
-              ? 'Micrófono silenciado'
-              : 'Micrófono activo para escuchar',
+    final messages = ref.read(conversationControllerProvider).messages;
+    if (messages.isEmpty) {
+      _showAlert(
+        const TopAlertData(
+          message: 'Todavía no hay mensajes para reproducir en voz alta.',
+          type: AlertType.info,
+          icon: Icons.volume_up_outlined,
+          duration: Duration(seconds: 2),
         ),
+      );
+      return;
+    }
+    final last = messages.last;
+
+    unawaited(_controller.speakMessage(last.text));
+
+    _showAlert(
+      TopAlertData(
+        message: 'Reproduciendo en voz alta: "${last.text}"',
+        type: AlertType.info,
+        icon: Icons.volume_up_rounded,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  Future<void> _playLastMessageTts() async {
-    if (_ttsService.isSpeaking) {
-      await _ttsService.stop();
-      if (mounted) setState(() {});
-      return;
-    }
-
-    if (_messages.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay mensajes para reproducir en voz alta.')),
-      );
-      return;
-    }
-
-    final messageToPlay = _messages.last.text;
-    await _ttsService.speak(messageToPlay);
-    if (mounted) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Reproduciendo: "$messageToPlay"'),
-          action: SnackBarAction(
-            label: 'Detener',
-            onPressed: () async {
-              await _ttsService.stop();
-              if (mounted) setState(() {});
-            },
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
+  String _categoryForKind(DataKind kind) => switch (kind) {
+    DataKind.amount => 'Importe',
+    DataKind.date => 'Fecha',
+    DataKind.time => 'Horario',
+    DataKind.text => 'Otro',
+  };
 
   Future<void> _handleConfirmInfo(ChatMessage message) async {
     final detected = message.detectedInfo;
     if (detected == null || detected.items.isEmpty) return;
 
-    final firstEntry = detected.items.entries.first;
-    final firstValue = firstEntry.value;
-    final firstKey = firstEntry.key.toLowerCase();
+    await _controller.pauseAudio();
+    if (!mounted) return;
 
-    String category = 'Importe';
-    if (firstKey.contains('horario')) {
-      category = 'Horario';
-    } else if (firstKey.contains('fecha')) {
-      category = 'Fecha';
+    String? targetKey;
+    if (detected.items.length == 1) {
+      targetKey = detected.items.keys.first;
+    } else {
+      targetKey = await DetectedItemPickerSheet.show(
+        context,
+        detectedInfo: detected,
+      );
     }
+
+    if (targetKey == null || !mounted) return;
+    final targetValue = detected.items[targetKey] ?? '';
+    final targetCategory = _categoryForKind(detected.kindFor(targetKey));
 
     final confirmed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (context) => ConfirmationScreen(
-          initialDetectedValue: firstValue,
-          category: category,
+          initialDetectedValue: targetValue,
+          category: targetCategory,
         ),
       ),
     );
 
     if (confirmed == true && mounted) {
-      setState(() {
-        final index = _messages.indexWhere((m) => m.id == message.id);
-        if (index != -1 && _messages[index].detectedInfo != null) {
-          _messages[index] = _messages[index].copyWith(
-            detectedInfo: _messages[index].detectedInfo!.copyWith(isConfirmed: true),
-          );
-        }
-      });
+      _controller.confirmDetectedInfo(message.id, itemKey: targetKey);
     }
   }
 
+  Future<void> _handleQuickConfirm() async {
+    await _controller.pauseAudio();
+    if (!mounted) return;
+
+    final messages = ref.read(conversationControllerProvider).messages;
+    ChatMessage? pendingMessage;
+    for (final message in messages.reversed) {
+      final info = message.detectedInfo;
+      if (info != null && !info.isConfirmed) {
+        pendingMessage = message;
+        break;
+      }
+    }
+
+    if (pendingMessage != null) {
+      await _handleConfirmInfo(pendingMessage);
+      return;
+    }
+
+    final option = await ConfirmQuickChoiceSheet.show(context);
+    if (!mounted || option == null) return;
+
+    switch (option) {
+      case QuickConfirmOption.askToWrite:
+        final written = await InterlocutorDataRequestSheet.show(context);
+        if (written != null && mounted) {
+          _controller.addWrittenConfirmation(
+            label: written.label,
+            value: written.value,
+            kind: written.kind,
+          );
+          _scrollToBottom();
+        }
+      case QuickConfirmOption.compareManually:
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (context) => const ConfirmationScreen(),
+          ),
+        );
+    }
+  }
+
+  Future<void> _handlePassPhoneToWrite() async {
+    await _controller.pauseAudio();
+    if (!mounted) return;
+
+    final reply = await InterlocutorWriteSheet.show(context);
+    if (reply != null && reply.trim().isNotEmpty && mounted) {
+      _controller.sendMessage(text: reply, sender: MessageSender.interlocutor);
+      _scrollToBottom();
+    }
+  }
+
+  void _openQuickPhrasesInChat() {
+    QuickPhrasesSheet.show(
+      context,
+      onPhraseSelected: (phrase) {
+        _sendMessage(textOverride: phrase);
+      },
+    );
+  }
+
   Future<void> _handleExpression() async {
+    await _controller.pauseAudio();
+    if (!mounted) return;
+
     final approvedText = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         builder: (context) => ExpressionScreen(
           initialText: _textController.text,
+          onUseExpressionAiChanged: widget.onUseExpressionAiChanged,
         ),
       ),
     );
@@ -379,13 +363,37 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  void _handlePresentation() {
+  Future<void> _handleShowMessage([String? messageText]) async {
+    final text = (messageText ?? _textController.text).trim();
+    final textToShow = text.isNotEmpty
+        ? text
+        : 'Hola, nos comunicamos por escrito.';
+
+    await _controller.pauseAudio();
+    if (!mounted) return;
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => const ShowMessageScreen(
-          initialText:
-              'Hola, soy sordo. Podemos comunicarnos por escrito o podés hablar y mi teléfono mostrará lo que decís.',
+        builder: (context) =>
+            ShowMessageScreen(initialText: textToShow, isPresentation: false),
+      ),
+    );
+  }
+
+  Future<void> _handlePresentation() async {
+    await _controller.pauseAudio();
+    if (!mounted) return;
+
+    final presentationText = ref
+        .read(appPreferencesProvider)
+        .effectivePresentationText;
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ShowMessageScreen(
+          initialText: presentationText,
           isPresentation: true,
+          onSavePresentation: widget.onPresentationSaved,
         ),
       ),
     );
@@ -404,18 +412,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ),
           ),
           content: Text(
-            'Por privacidad, la transcripción completa se descartará de este dispositivo.',
+            'Los mensajes y datos detectados se descartarán. Puente no guarda conversaciones por defecto para proteger tu privacidad.',
             style: AppTypography.body(
-              isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Continuar'),
+              child: const Text('Continuar hablando'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text('Finalizar y borrar'),
             ),
@@ -425,6 +438,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
 
     if (shouldDiscard == true && mounted) {
+      await _controller.clearConversation();
+      if (!mounted) return;
       Navigator.of(context).pop();
     }
   }
@@ -432,490 +447,555 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.backgroundDark : Colors.white;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : const Color(0xFF70818B);
+    final backgroundColor = isDark
+        ? AppColors.backgroundDark
+        : AppColors.surfaceLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _confirmDiscard();
-        }
-      },
-      child: Scaffold(
+    final conversationState = ref.watch(conversationControllerProvider);
+    final messages = conversationState.messages;
+    final isListening = conversationState.isListening;
+    final isMuted = conversationState.isMuted;
+    final pendingTranscription = conversationState.pendingTranscription;
+    // Se lee antes del Scaffold para capturar el teclado antes de que lo consuma.
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    ref.listen<ConversationState>(conversationControllerProvider, (
+      previous,
+      next,
+    ) {
+      if (previous?.messages.length != next.messages.length) {
+        _scrollToBottom();
+      }
+      if (previous?.isMuted != next.isMuted) {
+        _showAlert(
+          TopAlertData(
+            message: next.isMuted
+                ? 'Micrófono silenciado. No se está escuchando.'
+                : 'Micrófono habilitado. Tocá para hablar.',
+            type: AlertType.info,
+            icon: next.isMuted ? Icons.mic_off_outlined : Icons.mic_rounded,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      if (next.errorMessage != null &&
+          next.errorMessage != previous?.errorMessage) {
+        final isSettings = next.errorMessage!.contains('Ajustes');
+        _showAlert(
+          TopAlertData(
+            message: next.errorMessage!,
+            type: AlertType.error,
+            icon: Icons.error_outline_rounded,
+            duration: const Duration(seconds: 5),
+            actionLabel: isSettings ? 'Ajustes' : null,
+            onAction: isSettings
+                ? () => ref
+                      .read(conversationControllerProvider.notifier)
+                      .openAppSettings()
+                : null,
+          ),
+        );
+      }
+    });
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
         backgroundColor: backgroundColor,
-        appBar: AppBar(
-          backgroundColor: backgroundColor,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-            tooltip: 'Volver',
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          tooltip: 'Volver al Inicio',
+          color: textPrimary,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Conversación',
+          style: AppTypography.sectionTitle(textPrimary),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 22),
+            tooltip: 'Finalizar y descartar conversación',
+            color: textSecondary,
             onPressed: _confirmDiscard,
           ),
-          title: Text(
-            'Conversación',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontFamilyFallback: AppTypography.fontFallback,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: textPrimary,
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: borderColor),
+        ),
+      ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Column(
+                  children: [
+                    if (isListening)
+                      _ListeningStatusBanner(
+                        partialTranscription:
+                            conversationState.partialTranscription,
+                        onStop: _toggleMic,
+                      ),
+
+                    if (pendingTranscription != null &&
+                        pendingTranscription.trim().isNotEmpty)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: constraints.maxHeight * 0.28,
+                        ),
+                        child: SingleChildScrollView(
+                          child: _PendingTranscriptionCard(
+                            text: pendingTranscription,
+                            onEdit: () =>
+                                _editPendingTranscription(pendingTranscription),
+                            onDiscard: () => ref
+                                .read(conversationControllerProvider.notifier)
+                                .discardPendingTranscription(),
+                            onAdd: () => ref
+                                .read(conversationControllerProvider.notifier)
+                                .acceptPendingTranscription(
+                                  pendingTranscription,
+                                ),
+                          ),
+                        ),
+                      ),
+
+                    Expanded(
+                      child: messages.isEmpty
+                          ? _ConversationEmptyState(
+                              scrollController: _scrollController,
+                              onPresentation: _handlePresentation,
+                              onQuickPhrases: _openQuickPhrasesInChat,
+                              onStartListening: _toggleMic,
+                            )
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                14,
+                                16,
+                                10,
+                              ),
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                final message = messages[index];
+                                return ConversationMessageBubble(
+                                  message: message,
+                                  onTapDetectedInfo: () =>
+                                      _handleConfirmInfo(message),
+                                );
+                              },
+                            ),
+                    ),
+
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight:
+                            constraints.maxHeight *
+                            (isKeyboardOpen
+                                ? 0.72
+                                : isListening
+                                ? 0.64
+                                : 0.68),
+                      ),
+                      child: SingleChildScrollView(
+                        child: ConversationBottomPanel(
+                          textController: _textController,
+                          composerSender: _composerSender,
+                          isListening: isListening,
+                          isMuted: isMuted,
+                          isKeyboardOpen: isKeyboardOpen,
+                          onSelectSender: _setComposerSender,
+                          onSend: () => _sendMessage(),
+                          onPresentation: _handlePresentation,
+                          onNotUnderstood: () {
+                            NotUnderstoodSheet.show(
+                              context,
+                              onOptionSelected: (phrase) {
+                                _sendMessage(textOverride: phrase);
+                              },
+                            );
+                          },
+                          onQuickConfirm: _handleQuickConfirm,
+                          onPassPhoneToWrite: _handlePassPhoneToWrite,
+                          onOpenExpression: _handleExpression,
+                          onShowMessage: () => _handleShowMessage(),
+                          onToggleMic: _toggleMic,
+                          onToggleMute: _toggleMute,
+                          onPlayLastTts: _playLastMessageTts,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, size: 22),
-              tooltip: 'Finalizar y descartar conversación',
-              color: isDark ? AppColors.textSecondaryDark : const Color(0xFF5A6F7B),
-              onPressed: _confirmDiscard,
+            // Alerta superior flotante (nunca obstruye el micrófono ni el compositor inferior)
+            Positioned(
+              top: 8,
+              left: 16,
+              right: 16,
+              child: AnimatedSwitcher(
+                duration:
+                    (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position:
+                          Tween<Offset>(
+                            begin: const Offset(0.0, -0.3),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _activeAlert != null
+                    ? TopAlertBanner(
+                        key: ValueKey(_activeAlert!.message),
+                        data: _activeAlert!,
+                        onDismiss: _dismissAlert,
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ),
           ],
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Lista de mensajes de conversación
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final message = _messages[index];
-                    final isUser = message.sender == MessageSender.user;
-
-                    return Align(
-                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.78,
-                        ),
-                        child: Column(
-                          crossAxisAlignment:
-                              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            // Burbuja de mensaje
-                            Semantics(
-                              label: '${isUser ? "Vos" : "Interlocutor"}: ${message.text}',
-                              child: Container(
-                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                                decoration: BoxDecoration(
-                                  color: isUser
-                                      ? (isDark ? const Color(0xFF103F45) : const Color(0xFFE2F3F4))
-                                      : (isDark ? const Color(0xFF1F2B33) : const Color(0xFFEFF2F4)),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(18),
-                                    topRight: const Radius.circular(18),
-                                    bottomLeft: Radius.circular(isUser ? 18 : 4),
-                                    bottomRight: Radius.circular(isUser ? 4 : 18),
-                                  ),
-                                  border: Border.all(
-                                    color: isUser
-                                        ? (isDark ? const Color(0xFF1B5961) : const Color(0xFFCEE5E7))
-                                        : (isDark ? AppColors.borderDark : const Color(0xFFE2E7EA)),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      message.text,
-                                      style: TextStyle(
-                                        fontFamily: AppTypography.fontFamily,
-                                        fontFamilyFallback: AppTypography.fontFallback,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w400,
-                                        height: 1.35,
-                                        color: textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      message.timeFormatted,
-                                      style: TextStyle(
-                                        fontFamily: AppTypography.fontFamily,
-                                        fontFamilyFallback: AppTypography.fontFallback,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Tarjeta de información detectada si corresponde
-                            if (message.detectedInfo != null)
-                              DetectedInfoCard(
-                                detectedInfo: message.detectedInfo!,
-                                onTap: () => _handleConfirmInfo(message),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Indicador en vivo si el micrófono está escuchando
-              if (_speechState == SpeechState.listening)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryTeal.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.primaryTeal.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primaryTeal,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _liveRecognizedWords.isEmpty
-                              ? 'Escuchando a la otra persona…'
-                              : 'Escuchando: "$_liveRecognizedWords"',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontFamilyFallback: AppTypography.fontFallback,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: textPrimary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () => _speechService.stopListening(),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text('Detener'),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Panel inferior de interacción (Accesos de 1 toque + Compositor + Control de micrófono)
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark ? AppColors.borderDark : const Color(0xFFEEF2F4),
-                      width: 1,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      offset: const Offset(0, -4),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Fila 1: Tres accesos rápidos circulares (Presentarme, No entendí, Confirmar)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickCircleAction(
-                            icon: Icons.person_outline_rounded,
-                            label: 'Presentarme',
-                            isDark: isDark,
-                            onTap: _handlePresentation,
-                          ),
-                        ),
-                        Expanded(
-                          child: _QuickCircleAction(
-                            icon: Icons.help_outline_rounded,
-                            label: 'No entendí',
-                            isDark: isDark,
-                            onTap: () {
-                              NotUnderstoodSheet.show(
-                                context,
-                                onOptionSelected: (phrase) {
-                                  _sendMessage(textOverride: phrase);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: _QuickCircleAction(
-                            icon: Icons.check_circle_outline_rounded,
-                            label: 'Confirmar',
-                            isDark: isDark,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (context) => const ConfirmationScreen(
-                                    initialDetectedValue: '\$35.000',
-                                    category: 'Importe',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Fila 2: Compositor de texto (Teclado/Expresar + TextField + Enviar)
-                    Row(
-                      children: [
-                        // Botón de opciones de entrada / Expresar
-                        IconButton(
-                          icon: const Icon(Icons.keyboard_outlined),
-                          tooltip: 'Asistencia y sugerencias (Expresar)',
-                          color: isDark ? AppColors.textSecondaryDark : const Color(0xFF5A6F7B),
-                          onPressed: _handleExpression,
-                        ),
-                        // Campo de texto
-                        Expanded(
-                          child: TextField(
-                            controller: _textController,
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontFamilyFallback: AppTypography.fontFallback,
-                              fontSize: 15,
-                              color: textPrimary,
-                            ),
-                            textCapitalization: TextCapitalization.sentences,
-                            decoration: InputDecoration(
-                              hintText: 'Escribí tu mensaje…',
-                              hintStyle: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontFamilyFallback: AppTypography.fontFallback,
-                                fontSize: 15,
-                                color: textSecondary,
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? AppColors.surfaceMutedDark
-                                  : const Color(0xFFF3F6F7),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                            onSubmitted: (_) => _sendMessage(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Botón enviar
-                        Semantics(
-                          button: true,
-                          label: 'Enviar mensaje',
-                          child: InkWell(
-                            onTap: () => _sendMessage(),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primaryTeal,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Fila 3: Control de micrófono y reproducción (Silenciar + Botón grande Mic + TTS)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            _isMuted ? Icons.mic_off : Icons.mic_off_outlined,
-                            color: _isMuted
-                                ? AppColors.error
-                                : (isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99)),
-                          ),
-                          tooltip: _isMuted ? 'Reactivar micrófono' : 'Silenciar micrófono',
-                          onPressed: _handleMuteTap,
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Semantics(
-                              button: true,
-                              label: _speechState == SpeechState.listening
-                                  ? 'Detener escucha de micrófono'
-                                  : (_isMuted ? 'Micrófono silenciado' : 'Iniciar reconocimiento de voz'),
-                              child: InkWell(
-                                onTap: _handleMicTap,
-                                borderRadius: BorderRadius.circular(33),
-                                child: Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: _speechState == SpeechState.listening
-                                        ? AppColors.error
-                                        : AppColors.primaryTeal,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (_speechState == SpeechState.listening
-                                                ? AppColors.error
-                                                : AppColors.primaryTeal)
-                                            .withValues(alpha: 0.35),
-                                        offset: const Offset(0, 4),
-                                        blurRadius: 14,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      _speechState == SpeechState.listening
-                                          ? Icons.stop_rounded
-                                          : Icons.mic_rounded,
-                                      color: Colors.white,
-                                      size: 30,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _speechState == SpeechState.listening
-                                  ? 'Escuchando…'
-                                  : (_isMuted ? 'Silenciado' : 'Tocá para hablar'),
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontFamilyFallback: AppTypography.fontFallback,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: _speechState == SpeechState.listening
-                                    ? AppColors.error
-                                    : textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            _ttsService.isSpeaking
-                                ? Icons.stop_circle_outlined
-                                : Icons.volume_up_outlined,
-                            color: _ttsService.isSpeaking
-                                ? AppColors.primaryTeal
-                                : (isDark ? AppColors.textMutedDark : const Color(0xFF7A8D99)),
-                          ),
-                          tooltip: _ttsService.isSpeaking
-                              ? 'Detener reproducción en voz alta'
-                              : 'Reproducir último mensaje en voz alta',
-                          onPressed: _playLastMessageTts,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 }
 
-class _QuickCircleAction extends StatelessWidget {
-  const _QuickCircleAction({
-    required this.icon,
-    required this.label,
-    required this.isDark,
-    required this.onTap,
+class _ListeningStatusBanner extends StatelessWidget {
+  const _ListeningStatusBanner({
+    required this.partialTranscription,
+    required this.onStop,
   });
 
-  final IconData icon;
-  final String label;
-  final bool isDark;
-  final VoidCallback onTap;
+  final String partialTranscription;
+  final VoidCallback onStop;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark
+        ? AppColors.primaryTealDark
+        : AppColors.primaryTealLight;
+    final foreground = isDark
+        ? AppColors.primaryTealLight
+        : AppColors.primaryTealDark;
+    final borderColor = isDark
+        ? AppColors.borderDark
+        : AppColors.primaryTealMuted;
+
+    final subtitle = partialTranscription.isNotEmpty
+        ? partialTranscription
+        : 'Esperando texto del interlocutor…';
+
     return Semantics(
-      button: true,
-      label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceMutedDark : const Color(0xFFF1F4F6),
-                  shape: BoxShape.circle,
+      liveRegion: true,
+      label: 'Micrófono activo. $subtitle',
+      child: Container(
+        decoration: BoxDecoration(
+          color: background,
+          border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 6, 12, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                ExcludeSemantics(
+                  child: ListeningWaveIndicator(color: foreground),
                 ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    color: AppColors.primaryTeal,
-                    size: 22,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Micrófono activo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.secondary(
+                      foreground,
+                    ).copyWith(fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontFamilyFallback: AppTypography.fontFallback,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textSecondaryDark : const Color(0xFF536773),
+                const SizedBox(width: 8),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: foreground,
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    textStyle: AppTypography.secondary(
+                      foreground,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: onStop,
+                  child: const Text('Detener'),
+                ),
+              ],
+            ),
+            Text(
+              subtitle,
+              style: AppTypography.secondary(
+                foreground,
+              ).copyWith(fontSize: 13, fontWeight: FontWeight.w500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingTranscriptionCard extends StatelessWidget {
+  const _PendingTranscriptionCard({
+    required this.text,
+    required this.onEdit,
+    required this.onDiscard,
+    required this.onAdd,
+  });
+
+  final String text;
+  final VoidCallback onEdit;
+  final VoidCallback onDiscard;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final warningColor = isDark
+        ? AppColors.warningTextDark
+        : AppColors.warningTextLight;
+    final background = isDark
+        ? AppColors.surfaceMutedDark
+        : AppColors.warningLight;
+    final borderColor = isDark
+        ? AppColors.warningTextDark.withValues(alpha: 0.45)
+        : AppColors.warning;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: warningColor, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Texto transcripto — sin confirmar',
+                  style: AppTypography.secondary(
+                    warningColor,
+                  ).copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(text, style: AppTypography.body(textPrimary)),
+          const SizedBox(height: 10),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Editar'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: onDiscard,
+                child: const Text('Descartar'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                ),
+                onPressed: onAdd,
+                child: const Text('Agregar'),
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ConversationEmptyState extends StatelessWidget {
+  const _ConversationEmptyState({
+    required this.scrollController,
+    required this.onPresentation,
+    required this.onQuickPhrases,
+    required this.onStartListening,
+  });
+
+  final ScrollController scrollController;
+  final VoidCallback onPresentation;
+  final VoidCallback onQuickPhrases;
+  final VoidCallback onStartListening;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final cardColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final accent = isDark
+        ? AppColors.primaryTealOnDark
+        : AppColors.primaryTealDark;
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 1.2),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.surfaceMutedDark
+                        : AppColors.primaryTealLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 26,
+                    color: accent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Empezá la conversación',
+                style: AppTypography.sectionTitle(textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Escribí un mensaje para empezar. También podés usar una de estas opciones:',
+                style: AppTypography.secondary(textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryTeal,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 52),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: onPresentation,
+                icon: const Icon(Icons.person_outline_rounded),
+                label: const Text('Mostrar mi presentación'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: accent,
+                  side: BorderSide(color: borderColor),
+                  minimumSize: const Size(double.infinity, 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: onQuickPhrases,
+                icon: const Icon(Icons.flash_on_rounded),
+                label: const Text('Elegir frase rápida'),
+              ),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: accent,
+                  side: BorderSide(color: borderColor),
+                  minimumSize: const Size(double.infinity, 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: onStartListening,
+                icon: const Icon(Icons.record_voice_over_outlined),
+                label: const Text('Escuchar al interlocutor'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

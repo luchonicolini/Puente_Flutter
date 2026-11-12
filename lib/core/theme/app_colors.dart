@@ -7,6 +7,7 @@ abstract final class AppColors {
   static const Color primaryTealDark = Color(0xFF095A62);
   static const Color primaryTealLight = Color(0xFFE6F4F5);
   static const Color primaryTealMuted = Color(0xFFCCE8EB);
+  static const Color primaryTealOnDark = Color(0xFF45C4CE); // Teal legible en modo oscuro (>7:1)
 
   // Superficies e interfaces (Modo claro)
   static const Color surfaceLight = Color(0xFFFFFFFF);
@@ -20,13 +21,13 @@ abstract final class AppColors {
 
   // Textos modo claro
   static const Color textPrimaryLight = Color(0xFF102A38); // Azul marino muy oscuro
-  static const Color textSecondaryLight = Color(0xFF536773); // Gris contrastado
-  static const Color textMutedLight = Color(0xFF7A8D99);
+  static const Color textSecondaryLight = Color(0xFF536773); // Gris contrastado (>4.5:1 sobre blanco)
+  static const Color textMutedLight = Color(0xFF5A6F7B); // Gris suave pero con contraste WCAG AA (>4.5:1 sobre blanco)
 
   // Textos modo oscuro
   static const Color textPrimaryDark = Color(0xFFF0F5F8);
   static const Color textSecondaryDark = Color(0xFFA6BAC5);
-  static const Color textMutedDark = Color(0xFF768B97);
+  static const Color textMutedDark = Color(0xFF8BA0AC); // Contraste suficiente sobre fondo oscuro
 
   // Burbujas de conversación
   static const Color bubbleUserLight = Color(0xFFE2F3F5);
@@ -36,10 +37,14 @@ abstract final class AppColors {
 
   // Estados semánticos
   static const Color warning = Color(0xFFD97706); // Ámbar / Pendiente de confirmar
+  static const Color warningTextLight = Color(0xFF92400E); // Ámbar legible para texto (>4.5:1)
+  static const Color warningTextDark = Color(0xFFFFC14D); // Ámbar legible en modo oscuro (>9:1)
   static const Color warningLight = Color(0xFFFEF3C7);
   static const Color success = Color(0xFF0F766E); // Confirmado / Coincide
+  static const Color successTextDark = Color(0xFF34D399); // Verde teal legible en modo oscuro (>7.8:1)
   static const Color successLight = Color(0xFFD1FAE5);
   static const Color error = Color(0xFFDC2626); // Discrepancia
+  static const Color errorTextDark = Color(0xFFF87171); // Rojo legible en modo oscuro (>5.4:1)
   static const Color errorLight = Color(0xFFFEE2E2);
 
   // Bordes y divisores

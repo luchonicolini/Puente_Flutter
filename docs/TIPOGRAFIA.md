@@ -3,7 +3,7 @@
 ## Fuente elegida
 **Figtree Variable**, archivo previsto `Figtree-Variable.ttf`. Fuente principal para las seis pantallas, tanto en iOS como Android. Familia Flutter: `Figtree`.
 
-**Estado:** Fuente incorporada físicamente en `assets/fonts/Figtree-Variable.ttf` bajo licencia SIL Open Font License (OFL) 1.1 (`assets/fonts/OFL.txt`) y registrada en `pubspec.yaml` bajo la familia `Figtree`. Aplicada en `AppTheme` con fallback al sistema operativo.
+**Estado:** `assets/fonts/Figtree-Variable.ttf` está incorporada y registrada bajo la familia Flutter `Figtree`. Se distribuye junto a [`assets/fonts/OFL.txt`](../assets/fonts/OFL.txt), la licencia SIL Open Font License 1.1 de Figtree. Fuente: [Google Fonts / google/fonts](https://github.com/google/fonts/tree/main/ofl/figtree). La validación visual en Android e iOS sigue pendiente.
 
 ## Escala base (tamaños lógicos de Flutter)
 | Token | Tamaño | Peso | Uso |
@@ -34,10 +34,8 @@
 - Fallback a tipografía del sistema cuando falte un glifo o recurso.
 
 ## Integración futura en Flutter (referencia, no implementada)
-1. Añadir `assets/fonts/Figtree-Variable.ttf` desde fuente legítima junto a su licencia.
-2. Registrar la familia `Figtree` en `pubspec.yaml`, incluyendo rango de pesos compatible con el archivo variable.
-3. Aplicar `fontFamily: 'Figtree'` a `ThemeData` y a `TextTheme` compartido.
-4. Centralizar tokens en un solo archivo de estilos y evitar tamaños dispersos.
-5. Validar visualmente la fuente en Android e iOS y con escalado dinámico.
+1. Aplicar `fontFamily: 'Figtree'` a `ThemeData` y a `TextTheme` compartido.
+2. Centralizar tokens en un solo archivo de estilos y evitar tamaños dispersos.
+3. Validar visualmente la fuente en Android e iOS y con escalado dinámico.
 
 La tipografía no cambia la lógica de las seis pantallas ni autoriza empezar a programar.

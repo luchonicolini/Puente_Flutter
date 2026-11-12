@@ -5,12 +5,10 @@ import 'package:flutter/material.dart';
 abstract final class AppTypography {
   static const String fontFamily = 'Figtree';
   static const List<String> fontFallback = <String>[
-    '-apple-system',
-    'BlinkMacSystemFont',
     'Roboto',
     'Segoe UI',
     'Helvetica Neue',
-    'sans-serif',
+    'Arial',
   ];
 
   /// Hero / titular principal (28, 700)

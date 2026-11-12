@@ -59,6 +59,10 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Puente necesita acceso al micrófono solo cuando tocás para escuchar al interlocutor en la conversación cotidiana.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Puente utiliza el reconocimiento de voz del dispositivo para transcribir lo que tu interlocutor dice en tiempo real.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -66,9 +70,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Puente necesita acceso al micrófono para transcribir en tiempo real lo que te dice la otra persona.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Puente utiliza el reconocimiento de voz para convertir las palabras de tu interlocutor en texto accesible en tu pantalla.</string>
 </dict>
 </plist>

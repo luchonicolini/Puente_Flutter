@@ -20,7 +20,7 @@ El diseño visual aprobado muestra, en orden, Inicio, Conversación, Mostrar men
 - Logo Puente y acceso a preferencias arriba.
 - Título de bienvenida y descripción breve.
 - Botón principal grande «Iniciar conversación» con icono y flecha.
-- Accesos secundarios: «Frases rápidas», «Expresar» y «Comprar» (atajo a funciones de confirmación dentro de conversación, no módulo independiente).
+- Accesos secundarios: «Frases rápidas», «Mostrar mensaje» (cartel grande e inmediato sin abrir chat) y «Expresar» (preparar borrador para llevar a conversación o mostrar en grande).
 - Bloque inferior discreto que explica que se puede mostrar una presentación.
 - Sin cuenta obligatoria.
 
@@ -69,9 +69,10 @@ El diseño visual aprobado muestra, en orden, Inicio, Conversación, Mostrar men
 
 ## Navegación
 Inicio → Conversación → Mostrar mensaje / Confirmar información → volver a Conversación.
-Inicio → Expresar; desde el compositor de Conversación también abrir Expresar y volver con texto aprobado.
+Inicio → Mostrar mensaje (escritura directa en grande); Inicio → Expresar → elegir llevar el mensaje a Conversación o a Mostrar mensaje.
+Desde el compositor de Conversación también abrir Expresar y volver con texto aprobado.
 Inicio → Preferencias. «Presentarme» abre Mostrar mensaje con frase editable.
-«Comprar» abre conversación con frases/contexto de precio, no crea una séptima pantalla principal.
+Confirmar información vive dentro de Conversación (vía tarjeta detectada o acceso rápido); no crea una séptima pantalla principal.
 
 ## Reglas de implementación visual
 - Priorizar funciones esenciales en la zona inferior alcanzable con una mano.

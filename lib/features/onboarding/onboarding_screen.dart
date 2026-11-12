@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/storage/preferences_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/puente_brand_logo.dart';
+import '../../core/widgets/tap_scale.dart';
 import '../home/home_screen.dart';
 
 class OnboardingStep {
@@ -22,7 +22,17 @@ class OnboardingStep {
 }
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({
+    super.key,
+    this.onFinished,
+    this.isReopenedFromSettings = false,
+  });
+
+  /// El inicio de la app usa este callback para persistir que ya se vio.
+  final Future<void> Function()? onFinished;
+
+  /// Al reabrir desde Preferencias, volver a la pantalla anterior al terminar.
+  final bool isReopenedFromSettings;
 
   static const List<OnboardingStep> steps = <OnboardingStep>[
     OnboardingStep(
@@ -63,13 +73,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
 
   Future<void> _finish() async {
-    try {
-      final prefs = await PreferencesService.getInstance();
-      await prefs.setOnboardingCompleted(true);
-    } catch (_) {
-      // Si falla el almacenamiento local, no bloquear el acceso a la app
+    if (widget.onFinished != null) {
+      await widget.onFinished!();
+      return;
     }
+
     if (!mounted) return;
+    if (widget.isReopenedFromSettings) {
+      Navigator.of(context).pop();
+      return;
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (context) => const HomeScreen()),
     );
@@ -105,9 +118,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark ? AppColors.backgroundDark : Colors.white;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final isLastPage = _currentPage == OnboardingScreen.steps.length - 1;
+    final disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -122,13 +141,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   PuenteBrandLogo(isDark: isDark),
                   Semantics(
-                    button: true,
                     label: 'Omitir introducción',
                     child: TextButton(
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        minimumSize: const Size(48, 48),
                       ),
                       onPressed: _finish,
                       child: Text(
@@ -137,8 +157,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           fontFamily: AppTypography.fontFamily,
                           fontFamilyFallback: AppTypography.fontFallback,
                           fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                       ),
                     ),
@@ -164,33 +186,70 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Ilustración con fallback de ícono
+                            // Ilustración con fallback de ícono y efecto parallax/escala suave al deslizar
                             Expanded(
                               flex: 5,
                               child: Center(
-                                child: Semantics(
-                                  image: true,
-                                  label: step.semanticImageLabel,
-                                  child: Image.asset(
-                                    step.imageAsset,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        width: 140,
-                                        height: 140,
-                                        decoration: BoxDecoration(
-                                          color: isDark
-                                              ? AppColors.primaryTealDark.withValues(alpha: 0.3)
-                                              : AppColors.primaryTealLight,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.chat_bubble_outline_rounded,
-                                          size: 60,
-                                          color: AppColors.primaryTeal,
-                                        ),
-                                      );
-                                    },
+                                child: AnimatedBuilder(
+                                  animation: _pageController,
+                                  builder: (context, child) {
+                                    if (disableAnimations ||
+                                        !_pageController.hasClients ||
+                                        !_pageController
+                                            .position
+                                            .haveDimensions) {
+                                      return child!;
+                                    }
+                                    final page =
+                                        _pageController.page ??
+                                        _currentPage.toDouble();
+                                    final distance = (page - index).abs().clamp(
+                                      0.0,
+                                      1.0,
+                                    );
+                                    final scale = 1.0 - (distance * 0.12);
+                                    final opacity = 1.0 - (distance * 0.45);
+                                    return Transform.scale(
+                                      scale: scale,
+                                      child: Opacity(
+                                        opacity: opacity,
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: Semantics(
+                                    image: true,
+                                    label: step.semanticImageLabel,
+                                    child: Image.asset(
+                                      step.imageAsset,
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              width: 140,
+                                              height: 140,
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? AppColors.primaryTealDark
+                                                          .withValues(
+                                                            alpha: 0.3,
+                                                          )
+                                                    : AppColors
+                                                          .primaryTealLight,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons
+                                                    .chat_bubble_outline_rounded,
+                                                size: 60,
+                                                color: isDark
+                                                    ? AppColors
+                                                          .primaryTealOnDark
+                                                    : AppColors.primaryTeal,
+                                              ),
+                                            );
+                                          },
+                                    ),
                                   ),
                                 ),
                               ),
@@ -202,12 +261,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               label: 'Paso ${step.tag}',
                               child: Text(
                                 step.tag,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: AppTypography.fontFamily,
-                                  fontFamilyFallback: AppTypography.fontFallback,
+                                  fontFamilyFallback:
+                                      AppTypography.fontFallback,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.primaryTeal,
+                                  color: isDark
+                                      ? AppColors.primaryTealOnDark
+                                      : AppColors.primaryTeal,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -252,94 +314,101 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // Barra inferior con controles y paginación
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
               child: SizedBox(
                 height: 52,
                 child: Row(
                   children: [
-                    // Botón Volver (en pantallas 2 y 3)
-                    if (_currentPage > 0)
-                      Semantics(
-                        button: true,
-                        label: 'Paso anterior',
-                        child: InkWell(
-                          onTap: _previous,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            height: 50,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.surfaceMutedDark : const Color(0xFFF1F4F6),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'Volver',
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontFamilyFallback: AppTypography.fontFallback,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.textSecondaryDark : const Color(0xFF536773),
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      // Indicador de puntos a la izquierda en la pantalla 1
-                      _DotsIndicator(
-                        totalDots: OnboardingScreen.steps.length,
-                        currentIndex: _currentPage,
-                        isDark: isDark,
-                      ),
-
-                    // Espaciador o indicador en pantallas 2 y 3
-                    if (_currentPage > 0) ...[
-                      const Spacer(),
-                      _DotsIndicator(
-                        totalDots: OnboardingScreen.steps.length,
-                        currentIndex: _currentPage,
-                        isDark: isDark,
-                      ),
-                      const Spacer(),
-                    ] else
-                      const Spacer(),
-
-                    // Botón Siguiente / Empezar
-                    Semantics(
-                      button: true,
-                      label: isLastPage ? 'Empezar a usar Puente' : 'Siguiente paso',
-                      child: InkWell(
-                        onTap: _next,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          height: 50,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryTeal,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                isLastPage ? 'Empezar' : 'Siguiente',
-                                style: const TextStyle(
-                                  fontFamily: AppTypography.fontFamily,
-                                  fontFamilyFallback: AppTypography.fontFallback,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: disableAnimations
+                            ? Duration.zero
+                            : const Duration(milliseconds: 200),
+                        child: _currentPage > 0
+                            ? TapScale(
+                                key: const ValueKey('onboarding_back_btn'),
+                                pressedScale: 0.96,
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Paso anterior',
+                                  child: InkWell(
+                                    onTap: _previous,
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      height: 50,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppColors.surfaceMutedDark
+                                            : const Color(0xFFF1F4F6),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Text(
+                                        'Volver',
+                                        style: AppTypography.button(
+                                          isDark
+                                              ? AppColors.textSecondaryDark
+                                              : const Color(0xFF536773),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
+                              )
+                            : const SizedBox.shrink(
+                                key: ValueKey('onboarding_back_empty'),
                               ),
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 13,
-                                color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _DotsIndicator(
+                      totalDots: OnboardingScreen.steps.length,
+                      currentIndex: _currentPage,
+                      isDark: isDark,
+                      disableAnimations: disableAnimations,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: TapScale(
+                        pressedScale: 0.97,
+                        child: Semantics(
+                          button: true,
+                          label: isLastPage
+                              ? 'Empezar a usar Puente'
+                              : 'Siguiente paso',
+                          child: InkWell(
+                            onTap: _next,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              height: 50,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryTeal,
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedSwitcher(
+                                    duration: disableAnimations
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 180),
+                                    child: Text(
+                                      isLastPage ? 'Empezar' : 'Siguiente',
+                                      key: ValueKey(isLastPage),
+                                      style: AppTypography.button(Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -360,10 +429,12 @@ class _DotsIndicator extends StatelessWidget {
     required this.totalDots,
     required this.currentIndex,
     required this.isDark,
+    required this.disableAnimations,
   });
 
   final int totalDots, currentIndex;
   final bool isDark;
+  final bool disableAnimations;
 
   @override
   Widget build(BuildContext context) {
@@ -372,12 +443,15 @@ class _DotsIndicator extends StatelessWidget {
       children: List.generate(totalDots, (index) {
         final isActive = index == currentIndex;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: disableAnimations
+              ? Duration.zero
+              : const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
           margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: 8,
+          width: isActive ? 22 : 8,
           height: 8,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(4),
             color: isActive
                 ? AppColors.primaryTeal
                 : (isDark ? AppColors.borderDark : const Color(0xFFD6DFE3)),
@@ -387,4 +461,3 @@ class _DotsIndicator extends StatelessWidget {
     );
   }
 }
-

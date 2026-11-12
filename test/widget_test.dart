@@ -1,33 +1,41 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:puente/features/home/home_screen.dart';
+import 'package:puente/core/storage/app_preferences_store.dart';
+import 'package:puente/core/storage/onboarding_store.dart';
 import 'package:puente/main.dart';
 
-void main() {
-  testWidgets('PuenteApp renders HomeScreen with title and CTA by default',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
-    tester.view.devicePixelRatio = 3.0;
-    addTearDown(tester.view.resetPhysicalSize);
+import 'helpers/test_overrides.dart';
 
-    await tester.pumpWidget(const PuenteApp());
+void main() {
+  testWidgets('PuenteApp renders HomeScreen with title and CTA', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      PuenteApp(
+        onboardingStore: InMemoryOnboardingStore(initialCompleted: true),
+        preferencesStore: InMemoryAppPreferencesStore(),
+        overrides: createTestOverrides(),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    // Verifica que HomeScreen se haya montado
-    expect(find.byType(HomeScreen), findsOneWidget);
+    // Verifica que el título "Puente" y el titular estén presentes
+    expect(find.text('Puente'), findsWidgets);
+    expect(
+      find.textContaining('Comunicarnos'),
+      findsOneWidget,
+    );
 
-    // Verifica la marca y el titular
-    expect(find.text('Puente'), findsOneWidget);
-    expect(find.textContaining('Comunicarnos'), findsOneWidget);
-
-    // Verifica el CTA principal
+    // Verifica que el botón de Iniciar conversación esté disponible
     expect(find.textContaining('Iniciar\nconversación'), findsOneWidget);
 
-    // Verifica los accesos secundarios
+    // Verifica que los accesos secundarios estén disponibles
     expect(find.text('Frases rápidas'), findsOneWidget);
+    expect(find.text('Mostrar mensaje'), findsOneWidget);
     expect(find.text('Expresar'), findsOneWidget);
 
-    // Verifica el banner de presentación
+    // Verifica el bloque de presentación personal
+    expect(
+      find.textContaining('Podés mostrar un mensaje de presentación'),
+      findsOneWidget,
+    );
     expect(find.text('Ver ejemplo'), findsOneWidget);
   });
 }

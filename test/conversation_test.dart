@@ -1,161 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:puente/core/services/speech_service.dart';
-import 'package:puente/core/services/tts_service.dart';
+import 'package:puente/core/services/stt_service.dart';
 import 'package:puente/core/theme/app_theme.dart';
 import 'package:puente/core/widgets/not_understood_sheet.dart';
 import 'package:puente/features/conversation/conversation_screen.dart';
 
-class FakeSpeechService implements SpeechService {
-  FakeSpeechService({
-    this.initialAvailable = true,
-    this.initialHasPermission = true,
-  });
-
-  bool initialAvailable;
-  bool initialHasPermission;
-
-  SpeechState _state = SpeechState.uninitialized;
-  bool _isListening = false;
-  void Function(SpeechState state)? _onStateChanged;
-  void Function(String errorMessage)? _onError;
-  void Function(String words, bool isFinal)? _onResult;
-
-  @override
-  SpeechState get state => _state;
-
-  @override
-  bool get isListening => _isListening;
-
-  @override
-  bool get isAvailable => initialAvailable;
-
-  @override
-  Future<bool> get hasPermission async => initialHasPermission;
-
-  @override
-  Future<bool> initialize({
-    void Function(SpeechState state)? onStateChanged,
-    void Function(String errorMessage)? onError,
-  }) async {
-    _onStateChanged = onStateChanged;
-    _onError = onError;
-    if (!initialHasPermission) {
-      _state = SpeechState.denied;
-      _onStateChanged?.call(_state);
-      return false;
-    }
-    if (!initialAvailable) {
-      _state = SpeechState.notAvailable;
-      _onStateChanged?.call(_state);
-      return false;
-    }
-    _state = SpeechState.ready;
-    _onStateChanged?.call(_state);
-    return true;
-  }
-
-  @override
-  Future<void> startListening({
-    required void Function(String words, bool isFinal) onResult,
-    String? localeId,
-  }) async {
-    _isListening = true;
-    _state = SpeechState.listening;
-    _onResult = onResult;
-    _onStateChanged?.call(_state);
-  }
-
-  void emitResult(String words, {bool isFinal = false}) {
-    _onResult?.call(words, isFinal);
-    if (isFinal) {
-      _isListening = false;
-      _state = SpeechState.ready;
-      _onStateChanged?.call(_state);
-    }
-  }
-
-  @override
-  Future<void> stopListening() async {
-    _isListening = false;
-    _state = SpeechState.ready;
-    _onStateChanged?.call(_state);
-  }
-
-  @override
-  Future<void> cancelListening() async {
-    _isListening = false;
-    _state = SpeechState.ready;
-    _onStateChanged?.call(_state);
-  }
-
-  @override
-  void dispose() {
-    _isListening = false;
-  }
-}
-
-class FakeTtsService implements TtsService {
-  bool _isSpeaking = false;
-  String? lastSpokenText;
-  int speakCount = 0;
-  int stopCount = 0;
-
-  @override
-  bool get isSpeaking => _isSpeaking;
-
-  @override
-  Future<void> initialize({String? languageCode, double? speechRate}) async {}
-
-  @override
-  Future<void> speak(String text) async {
-    _isSpeaking = true;
-    lastSpokenText = text;
-    speakCount++;
-  }
-
-  @override
-  Future<void> stop() async {
-    _isSpeaking = false;
-    stopCount++;
-  }
-
-  @override
-  Future<void> setSpeechRate(double rate) async {}
-
-  @override
-  void dispose() {
-    _isSpeaking = false;
-  }
-}
+import 'helpers/test_overrides.dart';
 
 void main() {
   Widget createConversationScreen({
-    SpeechService? speechService,
-    TtsService? ttsService,
+    List<Override> overrides = const [],
+    ThemeData? theme,
+    double textScale = 1.0,
   }) {
-    return MaterialApp(
-      theme: AppTheme.lightTheme,
-      home: ConversationScreen(
-        speechService: speechService,
-        ttsService: ttsService,
+    return ProviderScope(
+      overrides: [...createTestOverrides(), ...overrides],
+      child: MaterialApp(
+        theme: theme ?? AppTheme.lightTheme,
+        builder: (context, child) {
+          final data = MediaQuery.of(context);
+          return MediaQuery(
+            data: data.copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          );
+        },
+        home: const ConversationScreen(),
       ),
     );
   }
 
-  testWidgets('ConversationScreen renders all components matching the approved mockup',
-      (WidgetTester tester) async {
+  testWidgets('ConversationScreen renders all components in initial empty state', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(390 * 3, 844 * 3);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
 
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
+    await tester.pumpWidget(createConversationScreen());
     await tester.pumpAndSettle();
 
     // 1. Cabecera
@@ -163,29 +45,25 @@ void main() {
     expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
     expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
 
-    // 2. Historial de mensajes y timestamps del mockup
+    // 2. Historial vacío sin datos demo precargados y accesos rápidos de inicio
     expect(
       find.textContaining('Hola, quiero saber cuánto cuesta la inscripción'),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(
-      find.textContaining('La inscripción es de \$20.000 y la cuota mensual cuesta \$35.000.'),
-      findsOneWidget,
-    );
-    expect(find.text('9:41'), findsOneWidget);
-    expect(find.text('9:42'), findsWidgets);
+    expect(find.textContaining('La inscripción es de'), findsNothing);
+    expect(find.text('Mostrar mi presentación'), findsOneWidget);
+    expect(find.text('Elegir frase rápida'), findsOneWidget);
+    expect(find.text('Escuchar al interlocutor'), findsOneWidget);
 
-    // 3. Tarjeta de información detectada con resumen
-    expect(find.text('Información detectada'), findsOneWidget);
-    expect(find.text('Inscripción'), findsOneWidget);
-    expect(find.text('\$20.000'), findsOneWidget);
-    expect(find.text('Cuota mensual'), findsOneWidget);
-    expect(find.text('\$35.000'), findsOneWidget);
-
-    // 4. Los tres accesos circulares rápidos
+    // 3. Los tres accesos circulares rápidos
     expect(find.text('Presentarme'), findsOneWidget);
     expect(find.text('No entendí'), findsOneWidget);
     expect(find.text('Confirmar'), findsOneWidget);
+
+    // 4. Selector de turno y acceso para pasar el teléfono mientras no se escribe
+    expect(find.text('Yo'), findsOneWidget);
+    expect(find.text('La otra persona'), findsOneWidget);
+    expect(find.text('Pasar para escribir'), findsOneWidget);
 
     // 5. Compositor de texto y botón de envío
     expect(find.byType(TextField), findsOneWidget);
@@ -198,15 +76,10 @@ void main() {
     expect(find.byIcon(Icons.volume_up_outlined), findsOneWidget);
   });
 
-  testWidgets('Tapping No entendí opens NotUnderstoodSheet with 4 options',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
+  testWidgets('Tapping No entendí opens NotUnderstoodSheet with 4 options', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(createConversationScreen());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('No entendí'));
@@ -219,159 +92,306 @@ void main() {
     expect(find.text('¿Podés explicarlo de otra manera?'), findsOneWidget);
   });
 
-  testWidgets('Tapping mic starts listening and displays real-time banner',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
+  testWidgets('Tapping mic toggles listening state to Escuchando...', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(createConversationScreen());
     await tester.pumpAndSettle();
 
-    expect(fakeSpeech.isListening, isFalse);
-
-    // Tocar micrófono
-    await tester.tap(find.byIcon(Icons.mic_rounded));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(fakeSpeech.isListening, isTrue);
-    expect(find.text('Escuchando a la otra persona…'), findsOneWidget);
-    expect(find.text('Escuchando…'), findsOneWidget);
-    expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
-
-    // Emitir palabras parciales
-    fakeSpeech.emitResult('Buenas tardes,');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(find.text('Escuchando: "Buenas tardes,"'), findsOneWidget);
-
-    // Detener escucha con el botón de detener
-    await tester.tap(find.text('Detener'));
-    await tester.pumpAndSettle();
-
-    expect(fakeSpeech.isListening, isFalse);
     expect(find.text('Tocá para hablar'), findsOneWidget);
-  });
 
-  testWidgets('Final transcription result commits a new message from interlocutor',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
-    await tester.pumpAndSettle();
-
-    // Iniciar escucha
     await tester.tap(find.byIcon(Icons.mic_rounded));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Enviar resultado final
-    fakeSpeech.emitResult('Tenemos una promoción con 20% de descuento.', isFinal: true);
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('Tenemos una promoción con 20% de descuento.'),
-      findsOneWidget,
-    );
-    expect(fakeSpeech.isListening, isFalse);
+    expect(find.text('Escuchando...'), findsOneWidget);
+    expect(find.textContaining('Micrófono activo'), findsOneWidget);
   });
 
-  testWidgets('Microphone permission denied shows notice dialog',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService(initialHasPermission: false);
-    final fakeTts = FakeTtsService();
+  testWidgets('El selector de turno permite escribir como la otra persona', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
 
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
+    await tester.pumpWidget(createConversationScreen());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('La otra persona'));
+    await tester.pump();
+
+    expect(find.text('Escribí lo que dice la otra persona…'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'El total es \$12.345');
+    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('El total es \$12.345'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+  });
+
+  testWidgets('Un mensaje propio no genera detección de datos', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(createConversationScreen());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'El total es \$12.345');
+    await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Total'), findsNothing);
+  });
+
+  testWidgets('Silenciar el micrófono detiene la escucha', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(createConversationScreen());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.mic_rounded));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Escuchando...'), findsOneWidget);
 
-    expect(find.text('Permiso de micrófono necesario'), findsOneWidget);
-    expect(find.text('Entendido'), findsOneWidget);
-
-    await tester.tap(find.text('Entendido'));
-    await tester.pumpAndSettle();
-  });
-
-  testWidgets('Tapping mute icon mutes audio and blocks mic',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
-    await tester.pumpAndSettle();
-
-    // Silenciar
     await tester.tap(find.byIcon(Icons.mic_off_outlined));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Silenciado'), findsOneWidget);
-
-    // Tocar micrófono mientras está silenciado
-    await tester.tap(find.byIcon(Icons.mic_rounded));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Micrófono silenciado'), findsWidgets);
-    expect(find.text('Entendido'), findsOneWidget);
-  });
-
-  testWidgets('Tapping TTS speaker invokes speech synthesis for last message',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byIcon(Icons.volume_up_outlined));
-    await tester.pumpAndSettle();
-
-    expect(fakeTts.speakCount, equals(1));
-    expect(fakeTts.lastSpokenText, contains('cuota mensual cuesta \$35.000'));
-  });
-
-  testWidgets('Final transcription detects sensitive data and displays DetectedInfoCard',
-      (WidgetTester tester) async {
-    final fakeSpeech = FakeSpeechService();
-    final fakeTts = FakeTtsService();
-
-    await tester.pumpWidget(createConversationScreen(
-      speechService: fakeSpeech,
-      ttsService: fakeTts,
-    ));
-    await tester.pumpAndSettle();
-
-    // Iniciar escucha
-    await tester.tap(find.byIcon(Icons.mic_rounded));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Enviar resultado final con precio y horario
-    fakeSpeech.emitResult(r'El turno sale $15.000 a las 18:30 hs.', isFinal: true);
+    expect(find.text('Micrófono silenciado'), findsOneWidget);
+    expect(find.text('Escuchando...'), findsNothing);
+  });
+
+  testWidgets(
+    'Sending a message animates new message bubble smoothly into view',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(createConversationScreen());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        '¿Tienen lockers disponibles?',
+      );
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Desplazar la lista hacia abajo para asegurar visibilidad en pantalla
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Tienen lockers disponibles?'), findsOneWidget);
+      expect(find.byType(FadeTransition), findsWidgets);
+      expect(find.byType(SlideTransition), findsWidgets);
+    },
+  );
+
+  testWidgets('Elegir frase rápida desde el estado vacío envía el mensaje', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(createConversationScreen());
     await tester.pumpAndSettle();
 
-    expect(find.text(r'El turno sale $15.000 a las 18:30 hs.'), findsOneWidget);
-    expect(find.text('Información detectada'), findsWidgets);
-    expect(find.text(r'$15.000'), findsOneWidget);
-    expect(find.text('18:30 hs'), findsOneWidget);
-    expect(find.text('Confirmar por escrito'), findsWidgets);
+    await tester.tap(find.text('Elegir frase rápida'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Hola, ¿cuánto cuesta esto?'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hola, ¿cuánto cuesta esto?'), findsOneWidget);
   });
+
+  testWidgets(
+    'Pasar para escribir registra mensaje del interlocutor y detecta horario',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(createConversationScreen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Pasar para escribir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Escribí tu respuesta'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'Abrimos a las 9:41');
+      await tester.tap(find.text('Enviar respuesta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abrimos a las 9:41'), findsOneWidget);
+      expect(find.text('Horario'), findsOneWidget);
+      expect(find.text('9:41'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Confirmar rápido permite pedir al interlocutor que escriba el dato',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(createConversationScreen());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirmar un dato'), findsOneWidget);
+      await tester.tap(find.text('Pedirle que escriba el dato'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('¿Podés escribir el dato acá?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, '35.000');
+      await tester.tap(find.text('Confirmar y agregar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Información confirmada'), findsOneWidget);
+      expect(find.text('35.000'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Las burbujas muestran participante visible y DetectedInfoCard indica acción',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(createConversationScreen());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField),
+        '¿Cuánto sale la consulta?',
+      );
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Vos'), findsWidgets);
+
+      await tester.tap(find.text('La otra persona'));
+      await tester.pump();
+
+      await tester.enterText(
+        find.byType(TextField),
+        'La consulta sale \$15.000',
+      );
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Otra persona'), findsWidgets);
+      expect(find.text('Sin confirmar'), findsOneWidget);
+      expect(find.text('Tocar para confirmar por escrito'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Modo oscuro, pantalla pequeña y texto grande renderizan sin desbordamientos',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320 * 3, 568 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        createConversationScreen(theme: AppTheme.darkTheme, textScale: 1.35),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.mic_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('La otra persona'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'El total es \$8.500');
+      await tester.tap(find.byIcon(Icons.arrow_forward_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('No entendí'), findsOneWidget);
+      expect(find.text('Micrófono activo'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Con teclado abierto se compacta el panel y No entendí sigue visible',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 3);
+      addTearDown(() {
+        tester.view.resetViewInsets();
+        tester.view.resetPhysicalSize();
+      });
+
+      await tester.pumpWidget(createConversationScreen());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tocá para hablar'), findsNothing);
+      expect(find.byTooltip('Tocar para transcribir'), findsOneWidget);
+      expect(find.text('Pasar para escribir'), findsOneWidget);
+
+      await tester.tap(find.text('No entendí'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotUnderstoodSheet), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'La tarjeta de transcripción pendiente permite revisar y agregar el mensaje',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final mockStt = MockSttService();
+      await tester.pumpWidget(
+        createConversationScreen(
+          overrides: createTestOverrides(sttService: mockStt),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.mic_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      mockStt.emitTranscription('El total es \$2.000', isFinal: true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Texto transcripto — sin confirmar'), findsOneWidget);
+      expect(find.text('Editar'), findsOneWidget);
+      expect(find.text('Descartar'), findsOneWidget);
+      expect(find.text('Agregar'), findsOneWidget);
+
+      await tester.tap(find.text('Agregar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('El total es \$2.000'), findsOneWidget);
+      expect(find.text('Sin confirmar'), findsOneWidget);
+    },
+  );
 }

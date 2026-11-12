@@ -54,7 +54,9 @@ class PuenteBrandLogo extends StatelessWidget {
             fontFamilyFallback: AppTypography.fontFallback,
             fontSize: fontSize,
             fontWeight: FontWeight.w700,
-            color: AppColors.primaryTeal,
+            color: effectiveIsDark
+                ? AppColors.primaryTealOnDark
+                : AppColors.primaryTeal,
           ),
         ),
       ],

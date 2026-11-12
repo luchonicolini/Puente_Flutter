@@ -37,6 +37,9 @@ class NotUnderstoodSheet extends StatelessWidget {
     final surfaceColor = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final accentColor = isDark
+        ? AppColors.primaryTealOnDark
+        : AppColors.primaryTeal;
 
     return Container(
       decoration: BoxDecoration(
@@ -46,88 +49,90 @@ class NotUnderstoodSheet extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Icon(
-                  Icons.help_outline_rounded,
-                  color: AppColors.primaryTeal,
-                  size: 26,
-                  semanticLabel: 'Ayuda de comprensión',
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'No entendí',
-                    style: AppTypography.screenTitle(textPrimary),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  tooltip: 'Cerrar',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Elegí qué pedirle a la otra persona:',
-              style: AppTypography.secondary(textSecondary),
-            ),
-            const SizedBox(height: 16),
-            ...options.map((option) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Semantics(
-                  button: true,
-                  label: 'Pedir: $option',
-                  child: Material(
-                    color: isDark ? AppColors.surfaceMutedDark : AppColors.surfaceMutedLight,
-                    borderRadius: BorderRadius.circular(14),
-                    child: InkWell(
+              ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.help_outline_rounded,
+                    color: accentColor,
+                    size: 26,
+                    semanticLabel: 'Ayuda de comprensión',
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No entendí',
+                      style: AppTypography.screenTitle(textPrimary),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Cerrar',
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Elegí qué pedirle a la otra persona:',
+                style: AppTypography.secondary(textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ...options.map((option) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Semantics(
+                    button: true,
+                    label: 'Pedir: $option',
+                    child: Material(
+                      color: isDark ? AppColors.surfaceMutedDark : AppColors.surfaceMutedLight,
                       borderRadius: BorderRadius.circular(14),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        onOptionSelected(option);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                option,
-                                style: AppTypography.sectionTitle(textPrimary),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onOptionSelected(option);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  option,
+                                  style: AppTypography.sectionTitle(textPrimary),
+                                ),
                               ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 16,
-                              color: AppColors.primaryTeal,
-                            ),
-                          ],
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: accentColor,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }),
-          ],
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );

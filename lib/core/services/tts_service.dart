@@ -1,82 +1,65 @@
-import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/foundation.dart';
 
-/// Contrato abstracto para el servicio de síntesis de voz (TTS).
-abstract class TtsService {
-  bool get isSpeaking;
-  Future<void> initialize({String? languageCode, double? speechRate});
+enum TtsStatus { idle, speaking, stopped, error }
+
+abstract interface class TtsService {
+  Future<void> init();
   Future<void> speak(String text);
   Future<void> stop();
   Future<void> setSpeechRate(double rate);
+  ValueNotifier<TtsStatus> get statusNotifier;
   void dispose();
 }
 
-/// Implementación real basada en `flutter_tts` para síntesis local en iOS y Android.
-class TtsServiceImpl implements TtsService {
-  TtsServiceImpl({FlutterTts? tts}) : _tts = tts ?? FlutterTts();
+/// Implementación simulada / para pruebas y entornos sin hardware de audio.
+class MockTtsService implements TtsService {
+  MockTtsService({this.simulateLatency = false});
 
-  final FlutterTts _tts;
-  bool _isSpeaking = false;
+  final bool simulateLatency;
+  final ValueNotifier<TtsStatus> _statusNotifier =
+      ValueNotifier<TtsStatus>(TtsStatus.idle);
+
+  String? lastSpokenText;
+  int speakCount = 0;
+  int stopCount = 0;
+  double speechRate = 0.5;
+  int setSpeechRateCount = 0;
 
   @override
-  bool get isSpeaking => _isSpeaking;
+  ValueNotifier<TtsStatus> get statusNotifier => _statusNotifier;
 
   @override
-  Future<void> initialize({String? languageCode, double? speechRate}) async {
-    try {
-      await _tts.setLanguage(languageCode ?? 'es-AR');
-      await _tts.setSpeechRate(speechRate ?? 0.5);
-      await _tts.setVolume(1.0);
-      await _tts.setPitch(1.0);
-
-      _tts.setStartHandler(() {
-        _isSpeaking = true;
-      });
-
-      _tts.setCompletionHandler(() {
-        _isSpeaking = false;
-      });
-
-      _tts.setCancelHandler(() {
-        _isSpeaking = false;
-      });
-
-      _tts.setErrorHandler((_) {
-        _isSpeaking = false;
-      });
-    } catch (_) {
-      // Manejo seguro en entornos donde el motor no esté disponible
-    }
+  Future<void> init() async {
+    _statusNotifier.value = TtsStatus.idle;
   }
 
   @override
   Future<void> speak(String text) async {
-    if (text.trim().isEmpty) return;
-    try {
-      _isSpeaking = true;
-      await _tts.speak(text);
-    } catch (_) {
-      _isSpeaking = false;
+    lastSpokenText = text;
+    speakCount++;
+    _statusNotifier.value = TtsStatus.speaking;
+
+    if (simulateLatency) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
     }
+
+    _statusNotifier.value = TtsStatus.idle;
   }
 
   @override
   Future<void> stop() async {
-    try {
-      await _tts.stop();
-    } catch (_) {}
-    _isSpeaking = false;
+    stopCount++;
+    _statusNotifier.value = TtsStatus.stopped;
   }
 
   @override
   Future<void> setSpeechRate(double rate) async {
-    final normalized = (rate * 0.5).clamp(0.1, 1.0);
-    try {
-      await _tts.setSpeechRate(normalized);
-    } catch (_) {}
+    speechRate = rate;
+    setSpeechRateCount++;
   }
 
   @override
   void dispose() {
-    _tts.stop();
+    _statusNotifier.dispose();
   }
 }

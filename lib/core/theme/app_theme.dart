@@ -1,12 +1,25 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
 abstract final class AppTheme {
+  static const PageTransitionsTheme _pageTransitionsTheme = PageTransitionsTheme(
+    builders: <TargetPlatform, PageTransitionsBuilder>{
+      TargetPlatform.android: _PuentePageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.linux: _PuentePageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.windows: _PuentePageTransitionsBuilder(),
+      TargetPlatform.fuchsia: _PuentePageTransitionsBuilder(),
+    },
+  );
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      pageTransitionsTheme: _pageTransitionsTheme,
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.primaryTeal,
@@ -79,6 +92,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      pageTransitionsTheme: _pageTransitionsTheme,
       colorScheme: const ColorScheme(
         brightness: Brightness.dark,
         primary: AppColors.primaryTeal,
@@ -125,24 +139,62 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primaryTeal,
+          foregroundColor: AppColors.primaryTealOnDark,
           minimumSize: const Size(double.infinity, 48),
-          side: const BorderSide(color: AppColors.primaryTeal, width: 1.5),
+          side: const BorderSide(color: AppColors.primaryTealOnDark, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: AppTypography.button(AppColors.primaryTeal),
+          textStyle: AppTypography.button(AppColors.primaryTealOnDark),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryTeal,
-          textStyle: AppTypography.button(AppColors.primaryTeal),
+          foregroundColor: AppColors.primaryTealOnDark,
+          textStyle: AppTypography.button(AppColors.primaryTealOnDark),
         ),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.borderDark,
         thickness: 1,
+      ),
+    );
+  }
+}
+
+/// Transición suave entre pantallas (deslizamiento lateral sutil + fade) que
+/// respeta la preferencia del sistema de reducir movimiento.
+class _PuentePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _PuentePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (disableAnimations) {
+      return child;
+    }
+
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.06, 0.0),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
       ),
     );
   }
