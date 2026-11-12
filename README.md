@@ -70,4 +70,7 @@ La suite cubre:
 - [Plan de implementación de UI](docs/PLAN_IMPLEMENTACION_UI.md)
 - [Onboarding](docs/ONBOARDING.md)
 - [Tipografía](docs/TIPOGRAFIA.md)
+- [Política de privacidad pública (Google Play)](https://luchonicolini.github.io/Certificaciones-URL/puente/privacy.html)
+- [Términos de uso públicos](https://luchonicolini.github.io/Certificaciones-URL/puente/terms.html)
+- [Página de soporte](https://luchonicolini.github.io/Certificaciones-URL/puente/support.html)
 - Procedimientos especializados para agentes en [`.agents/skills/`](.agents/skills/).
