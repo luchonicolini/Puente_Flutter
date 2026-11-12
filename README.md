@@ -1,39 +1,113 @@
 # Puente
 
-**Tu independencia, tu manera de comunicarte.**
+> **English:** A Flutter accessibility app designed to support everyday communication for deaf and hard-of-hearing people. It combines text, message display and platform speech services while keeping the user in control of what is communicated.
 
-Puente es una aplicación móvil de accesibilidad, prevista para iOS y Android con Flutter, cuyo propósito es ayudar a personas sordas o con dificultades auditivas a desenvolverse con mayor autonomía en situaciones cotidianas. No pretende corregir a las personas: busca reducir barreras de comunicación entre interlocutores.
+Puente busca reducir las barreras al comunicarse en un comercio, gimnasio u otra situación cotidiana.
+Permite escribir, mostrar mensajes, pedir aclaraciones y confirmar información sin que la otra persona tenga que instalar la app.
 
-## Estado
-**Fase de definición de producto.** No hay aplicación implementada ni funcionalidades verificadas. Las descripciones son requisitos propuestos, no capacidades existentes.
+**Estado:** implementación Flutter en desarrollo con pantallas, servicios y tests en el repositorio.
+La presencia de código no implica validación de voz en todos los dispositivos ni publicación en tiendas.
 
-## Principios
-- La persona usuaria conserva el control de lo que comunica.
-- Interacción híbrida: escribir, mostrar texto, escuchar mediante transcripción y responder con voz sintetizada.
-- La otra persona no necesita instalar Puente.
-- Presentación opcional, accesible con un toque.
-- Botón permanente «No entendí» para pedir repetición, escritura o aclaración.
-- Confirmación explícita de precios, fechas, horarios, cantidades y direcciones; nunca asumir que una transcripción es correcta.
-- Accesibilidad, privacidad, consentimiento y alternativas cuando la IA falle.
+## Vista previa
+
+[COMPLETAR: capturas reales de Inicio, Conversación y Confirmar información]
+
+Las ilustraciones de onboarding y la tipografía Figtree están incluidas en `assets/`.
+Son recursos de la interfaz, no capturas de una aplicación ejecutándose.
+
+## Funcionalidades y alcance actual
+
+- Onboarding de tres pantallas y preferencias guardadas localmente.
+- Conversación por texto, presentación personal opcional y botón **«No entendí»**.
+- Mostrar un mensaje en pantalla y usar frases rápidas.
+- Servicios de reconocimiento y síntesis de voz mediante plugins de plataforma.
+- Detección determinista de importes, horarios y fechas; comparación con confirmaciones escritas.
+- Preferencias de tema, voz y accesibilidad.
+- **Expresar está en modo demostración:** las propuestas son simuladas localmente. No hay un proveedor de IA real integrado.
+
+La disponibilidad y calidad de voz dependen del dispositivo, permisos, idioma y servicios del sistema.
+No se garantiza reconocimiento offline ni exactitud de las transcripciones.
+Una coincidencia de texto tampoco confirma la veracidad de un precio o condición.
+Puente no reemplaza intérpretes ni servicios profesionales o de emergencia.
+
+## Stack y arquitectura
+
+| Área | Implementación |
+| --- | --- |
+| UI | Flutter y Dart; SDK Dart requerido: `^3.12.0` |
+| Organización | Módulos por funcionalidad |
+| Voz | Contratos `SpeechService` y `TtsService`; adaptadores speech_to_text y flutter_tts |
+| Preferencias | `PreferencesService` con ChangeNotifier y abstracción `PreferencesStore` |
+| Persistencia | shared_preferences; implementación en memoria para pruebas |
+| Dominio | Detección y comparación de datos sensibles en Dart |
+| Pruebas | flutter_test con servicios falsos e inyección de dependencias |
+
+La UI depende de contratos para voz y preferencias, lo que permite comprobar interacciones sin micrófono,
+red ni almacenamiento real. La lógica de detección y comparación está separada de los widgets.
+No se presenta Riverpod ni un backend de IA como parte de la implementación.
+
+| Directorio | Responsabilidad |
+| --- | --- |
+| `lib/features/` | Inicio, onboarding, conversación, expresión y confirmación |
+| `lib/domain/` | Tipos y reglas de detección y comparación |
+| `lib/core/services/` | Contratos y adaptadores de voz |
+| `lib/core/storage/` | Preferencias persistentes y en memoria |
+| `lib/core/theme/` | Colores, tipografía y tema |
+| `test/` | Pruebas de dominio y pantallas |
+
+## Cómo ejecutarlo
+
+1. Instalá Flutter con Dart 3.12 o superior.
+2. Prepará un emulador o dispositivo Android, o macOS con Xcode para iOS.
+3. Cloná y ejecutá:
+
+   ```bash
+   git clone https://github.com/luchonicolini/Puente_Flutter.git
+   cd Puente_Flutter
+   flutter doctor
+   flutter pub get
+   flutter devices
+   flutter run
+   ```
+
+4. Elegí el dispositivo con `flutter run -d <ID>` si hay varios disponibles.
+5. Para validar voz, utilizá un dispositivo físico, concedé los permisos solicitados y comprobá los estados de permiso denegado o servicio no disponible.
+
+No se necesita una clave de IA para probar la implementación actual.
+Las pruebas con servicios falsos no certifican el funcionamiento de los plugins en hardware.
+
+## Tests
+
+```bash
+flutter analyze
+flutter test
+```
+
+La suite incluye onboarding, inicio, preferencias, conversación, expresión y confirmación de datos.
+Los tests de conversación usan dobles de STT/TTS; los de preferencias pueden usar almacenamiento en memoria.
+Este repositorio no tiene un workflow de CI propio en esta propuesta.
 
 ## Documentación
-- [Instrucciones para agentes](AGENTS.md)
-- [Visión y alcance](docs/PRODUCTO.md)
-- [Requisitos funcionales](docs/FUNCIONALIDADES.md)
-- [Flujos y pantallas](docs/FLUJOS_USUARIO.md)
-- [Accesibilidad y privacidad](docs/ACCESIBILIDAD.md)
-- [Arquitectura propuesta](docs/ARQUITECTURA.md)
-- [Decisiones y pendientes](docs/DECISIONES.md)
 
-## Desarrollo
-Antes de escribir código, leer `AGENTS.md` y los documentos relevantes. No iniciar implementación ni elegir servicios definitivos sin acordar el alcance.
+- [Producto](docs/PRODUCTO.md) y [decisiones](docs/DECISIONES.md).
+- [Requisitos](docs/FUNCIONALIDADES.md), [flujos](docs/FLUJOS_USUARIO.md) y [accesibilidad y privacidad](docs/ACCESIBILIDAD.md).
+- [Diseño](docs/DISENO_VISUAL.md), [onboarding](docs/ONBOARDING.md) y [tipografía](docs/TIPOGRAFIA.md).
 
-## Diseño de las seis pantallas
-- [Diseño visual aprobado](docs/DISENO_VISUAL.md)
-- [Plan de implementación de UI](docs/PLAN_IMPLEMENTACION_UI.md)
+Algunos documentos iniciales describen propuestas o etapas anteriores. Para evaluar la implementación,
+contrastalos con el código y las entradas posteriores del registro de decisiones.
 
-## Onboarding
-El flujo de bienvenida de tres pantallas está especificado en [ONBOARDING.md](docs/ONBOARDING.md). Sus imágenes individuales están pendientes de subir al repositorio.
+## Próximos pasos
 
-## Skills para agentes
-Cinco procedimientos especializados están versionados en [`.agents/skills/`](.agents/skills/). Ver `AGENTS.md` para seleccionar la skill adecuada antes de cada tarea.
+- Validar STT/TTS, permisos, ruido y errores en dispositivos iOS y Android.
+- Realizar pruebas de usabilidad y accesibilidad con personas destinatarias.
+- Actualizar los documentos históricos que todavía describen componentes ya implementados.
+- Evaluar privacidad, costos y confirmación de intención antes de integrar IA real.
+
+## Pendientes de presentación
+
+- [COMPLETAR: capturas reales de Inicio, Conversación y Confirmar información]
+- [COMPLETAR: enlace a demo instalable o tienda si existe una publicación]
+
+## Autor
+
+[Luciano Nicolini](https://github.com/luchonicolini) · iOS Developer (Swift, SwiftUI), con desarrollo multiplataforma en Flutter.
