@@ -38,6 +38,10 @@ migrate_working_dir/
 .env.*
 *.local
 
+# Impeccable binary cache
+.agents/skills/impeccable/scripts/bin/
+
+
 
 # Symbolication related
 app.*.symbols
