@@ -1,9 +1,11 @@
 # Puente
 
-> **English:** A Flutter accessibility app designed to support everyday communication for deaf and hard-of-hearing people. It combines text, message display and platform speech services while keeping the user in control of what is communicated.
+> **English:** A Flutter accessibility app designed to help deaf and hard-of-hearing children communicate more independently in everyday situations. It combines text, message display and platform speech services while keeping the user in control of what is communicated.
 
-Puente busca reducir las barreras al comunicarse en un comercio, gimnasio u otra situación cotidiana.
-Permite escribir, mostrar mensajes, pedir aclaraciones y confirmar información sin que la otra persona tenga que instalar la app.
+Puente es un proyecto pensado para ayudar a **chicos sordos o con dificultades auditivas** que encuentran barreras para comunicarse con otras personas en situaciones cotidianas.
+Su objetivo es facilitar esos intercambios y favorecer una mayor autonomía mediante texto, mensajes en pantalla y servicios de voz, sin que el interlocutor tenga que instalar la app.
+
+La propuesta parte de una necesidad de comunicación accesible, reconociendo que cada persona puede tener preferencias y necesidades diferentes. El impacto en la vida cotidiana todavía debe validarse con las personas destinatarias.
 
 **Estado:** implementación Flutter en desarrollo con pantallas, servicios y tests en el repositorio.
 La presencia de código no implica validación de voz en todos los dispositivos ni publicación en tiendas.
