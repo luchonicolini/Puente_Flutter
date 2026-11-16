@@ -1,0 +1,22 @@
+{
+  "images" : [
+    {
+      "filename" : "PuenteSplashMark.pdf",
+      "idiom" : "universal",
+      "scale" : "1x",
+      "appearances" : [
+        { "appearance" : "luminosity", "value" : "light" }
+      ]
+    },
+    {
+      "filename" : "PuenteSplashMarkDark.pdf",
+      "idiom" : "universal",
+      "scale" : "1x",
+      "appearances" : [
+        { "appearance" : "luminosity", "value" : "dark" }
+      ]
+    }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 },
+  "properties" : { "preserves-vector-representation" : true }
+}

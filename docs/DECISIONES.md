@@ -1,5 +1,8 @@
 # Registro de decisiones del producto
 
+## Ícono de aplicación — 16/11/2026
+Se reemplazó el ícono genérico de Flutter por una marca propia de Puente: una burbuja de conversación teal con tres puntos, sobre fondo claro. El símbolo reutiliza la forma y paleta del distintivo del splash, con tres puntos para reforzar la lectura de diálogo. Se generaron variantes para Android (incluido ícono adaptativo), iOS, web, macOS y Windows. `PuenteBrandLogo` reutiliza la misma forma en Inicio y Onboarding, y los nombres visibles de plataforma se normalizaron como «Puente».
+
 ## Acordado
 - Nombre: **Puente**.
 - Misión: **Poder desenvolverme solo en situaciones cotidianas**.
@@ -181,6 +184,13 @@ Aprobada la incorporación de 6 mejoras de animación nativas en Flutter (sin de
 4. **Micro-interacción táctil (`TapScale`):** Widget reutilizable (`Listener` + `AnimatedScale`) aplicado en tarjetas y CTAs de Inicio, botones rápidos y micrófono en Conversación, tarjetas de Expresar y navegación del Onboarding sin interferir con `InkWell` ni lectores de pantalla.
 5. **Aparición suave en «Expresar» y «Confirmar información»:** Se reutilizó `SmoothEntrance` (extraído de las burbujas de conversación y con soporte de retardo escalonado sin `Timer`) en tarjetas de propuestas y avisos de Expresar, y `AnimatedSize` + `AnimatedSwitcher` en los resultados de comparación.
 6. **Transiciones e indicadores en `OnboardingScreen`:** Píldoras indicadoras expansibles (`AnimatedContainer`), `AnimatedSwitcher` para «Volver» y «Siguiente/Empezar», y escala/opacidad suave en ilustraciones vinculadas al `PageController`.
+
+## Splash nativo unificado y arranque sin pantalla intermedia — 16/11/2026
+Se aprobó y aplicó un splash nativo sencillo y coherente en Android e iOS:
+- Fondo adaptado al modo claro/oscuro y símbolo de conversación de Puente, sin texto ni animaciones decorativas.
+- El splash nativo se mantiene mientras se leen las preferencias y el estado del onboarding locales; si esa lectura tarda más de 3 segundos o falla, se abre con valores predeterminados.
+- Se eliminó el indicador de carga Flutter que aparecía antes de Inicio/onboarding. El primer frame visible de Flutter ya es la pantalla de destino.
+- El onboarding de tres pasos continúa siendo el flujo informativo opcional de primera apertura; no se considera un segundo splash.
 
 ## Optimización de contraste en textos pequeños y Modo Sol para exteriores — 12/11/2026
 1. **Contraste WCAG AAA en textos pequeños y botones en modo claro:** Se adoptó `AppColors.primaryTealDark` (`#095A62`, contraste $>7.4:1$) en `outlinedButtonTheme` y `textButtonTheme` de `AppTheme.lightTheme`, en el texto del logotipo `PuenteBrandLogo`, en los tags de pasos del Onboarding (`onboarding_screen.dart`), en los íconos de cabecera de `NotUnderstoodSheet`, `QuickPhrasesSheet`, `ConversationSheets` y en las filas de información/acción de `SettingsScreen`, garantizando nitidez absoluta incluso en pantallas de baja resolución o fuentes pequeñas.

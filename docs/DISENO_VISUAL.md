@@ -5,6 +5,7 @@ Estado: **dirección visual aprobada por el usuario** a partir del mockup de sei
 ## Identidad visual
 - Sensación: cálida, confiable, moderna, sencilla y sin ruido.
 - Color principal: verde petróleo/teal `#0D7E88`; variantes oscuras y claras deben pasar pruebas de contraste.
+- Símbolo de marca: burbuja de conversación teal con tres puntos claros; mantener la misma silueta en el ícono de aplicación, splash nativo y logotipo usado dentro de Inicio y Onboarding.
 - Fondos: blanco y gris muy claro; mensajes de usuario con tinte teal suave, interlocutor en gris claro.
 - Texto principal: azul marino muy oscuro; secundarios en gris suficientemente contrastado.
 - Tarjetas y botones: esquinas redondeadas; sin sombras pesadas ni decoración excesiva.

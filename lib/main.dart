@@ -33,8 +33,9 @@ class PuenteApp extends StatefulWidget {
 class _PuenteAppState extends State<PuenteApp> {
   late final OnboardingStore _onboardingStore;
   late final AppPreferencesStore _preferencesStore;
-  late Future<bool> _hasCompletedOnboarding;
   AppPreferences _preferences = const AppPreferences();
+  bool _isReady = false;
+  bool _hasCompletedOnboarding = false;
   bool _completedDuringSession = false;
 
   @override
@@ -44,13 +45,42 @@ class _PuenteAppState extends State<PuenteApp> {
         widget.onboardingStore ?? SharedPreferencesOnboardingStore();
     _preferencesStore =
         widget.preferencesStore ?? SharedPreferencesAppPreferencesStore();
-    _hasCompletedOnboarding = _onboardingStore.hasCompletedOnboarding();
-    _loadPreferences();
+    WidgetsBinding.instance.deferFirstFrame();
+    unawaited(_loadStartupState());
   }
 
-  Future<void> _loadPreferences() async {
-    final loaded = await _preferencesStore.load();
-    if (mounted) setState(() => _preferences = loaded);
+  Future<void> _loadStartupState() async {
+    var completedOnboarding = false;
+    var preferences = const AppPreferences();
+
+    try {
+      final values =
+          await Future.wait<Object>([
+            _onboardingStore.hasCompletedOnboarding().catchError(
+              (Object _) => false,
+            ),
+            _preferencesStore.load().catchError(
+              (Object _) => const AppPreferences(),
+            ),
+          ]).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => <Object>[false, const AppPreferences()],
+          );
+      completedOnboarding = values[0] as bool;
+      preferences = values[1] as AppPreferences;
+    } catch (_) {
+      // Preferencias son locales y opcionales: si no se pueden leer, abrir
+      // con valores predeterminados sin dejar el splash detenido.
+    }
+
+    if (mounted) {
+      setState(() {
+        _hasCompletedOnboarding = completedOnboarding;
+        _preferences = preferences;
+        _isReady = true;
+      });
+    }
+    WidgetsBinding.instance.allowFirstFrame();
   }
 
   Future<void> _updatePreferences(AppPreferences updated) async {
@@ -91,26 +121,15 @@ class _PuenteAppState extends State<PuenteApp> {
           ),
         );
       },
-      home: FutureBuilder<bool>(
-        future: _hasCompletedOnboarding,
-        builder: (context, snapshot) {
-          if (_completedDuringSession || snapshot.data == true) {
-            return HomeScreen(
+      home: !_isReady
+          ? const SizedBox.shrink()
+          : (_completedDuringSession || _hasCompletedOnboarding)
+          ? HomeScreen(
               preferences: _preferences,
               onPreferencesChanged: _updatePreferences,
               onClearLocalData: _clearLocalData,
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          return OnboardingScreen(onFinished: _completeOnboarding);
-        },
-      ),
+            )
+          : OnboardingScreen(onFinished: _completeOnboarding),
     );
 
     try {
@@ -152,7 +171,9 @@ class _PreferencesSyncState extends ConsumerState<_PreferencesSync> {
       if (!mounted) return;
       ref.read(appPreferencesProvider.notifier).state = widget.preferences;
       unawaited(
-        ref.read(ttsServiceProvider).setSpeechRate(widget.preferences.speechRate),
+        ref
+            .read(ttsServiceProvider)
+            .setSpeechRate(widget.preferences.speechRate),
       );
     });
   }

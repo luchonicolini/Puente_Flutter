@@ -4,6 +4,7 @@
 Flujo visual de tres pantallas aprobado por el usuario e **implementado en Flutter** (`lib/features/onboarding/onboarding_screen.dart`). Los 3 recursos gráficos (`onboarding_welcome.png`, `onboarding_communication.png`, `onboarding_independence.png`) fueron incorporados en `assets/images/onboarding/` y registrados en `pubspec.yaml`.
 
 ## Comportamiento
+- El splash nativo de Android e iOS es únicamente la superficie breve de arranque; no duplica la bienvenida en Flutter.
 - Mostrar únicamente en el primer inicio de la instalación.
 - Tres pasos, navegación Siguiente / Volver / Empezar y acción Omitir visible.
 - Al completar u omitir, guardar localmente el estado y abrir Inicio.

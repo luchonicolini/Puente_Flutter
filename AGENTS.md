@@ -54,4 +54,5 @@ Las skills locales están en `.agents/skills/`. Antes de cada tarea, identificar
 - `puente-ai-safety`: Expresar, IA, ambigüedad, privacidad y confirmaciones.
 - `puente-testing`: pruebas, regresión y verificación.
 - `impeccable`: auditoría de calidad de diseño, jerarquía, UX y antipatrones de frontend.
+- `apple-design`: auditoría y diseño para iOS, iPadOS y macOS siguiendo Apple Human Interface Guidelines.
 Si hay conflicto entre una skill y las decisiones aprobadas, no resolverlo silenciosamente: consultar. Las skills son procedimientos, no autorización para programar. Mantenerlas actualizadas cuando cambien los requisitos.
